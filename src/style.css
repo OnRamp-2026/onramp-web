@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #16213e;
+  --color-ink: #16213e;
+  --color-slate: #566579;
+  --color-faint: #93a1b3;
+  --color-bg: #f4f8fc;
+  --color-surface: #ffffff;
+  --color-surf2: #fafcfe;
+  --color-line: #e6ecf4;
+  --color-line2: #d4deea;
+  --color-blue: #3e9be9;
+  --color-teal: #1fc7ac;
+  --color-ok: #1fa97f;
+
+  --font-geo: "Poppins", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "Pretendard", -apple-system, sans-serif;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 브랜드 그라데이션 */
+.bg-grad {
+  background: linear-gradient(135deg, #3e9be9 0%, #22cbb0 100%);
+}
+
+/* 답변 본문 inline code */
+.prose-code code {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  background: #16213e0a;
+  padding: 1px 6px;
+  border-radius: 5px;
+  color: #21505a;
+}
+.prose-code .hl {
+  background: #1fc7ac26;
+  padding: 0 3px;
+  border-radius: 3px;
+}
+
+/* pulse */
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 #1fa97f55; }
+  70% { box-shadow: 0 0 0 6px #1fa97f00; }
+  100% { box-shadow: 0 0 0 0 #1fa97f00; }
+}
+.pulse { animation: pulse 2.4s infinite; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.rise { animation: rise 0.5s ease both; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #16213e1f; border-radius: 8px; border: 3px solid transparent; background-clip: content-box; }
