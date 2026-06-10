@@ -6,6 +6,7 @@ import AssetField from "@/components/assets/AssetField.vue";
 import UploadEntry from "@/components/assets/UploadEntry.vue";
 import FlowStepper from "@/components/assets/FlowStepper.vue";
 import type { AssetStatus, Severity } from "@/types";
+import { DOMAIN_LABEL } from "@/types";
 
 const store = useAssetsStore();
 
@@ -119,7 +120,7 @@ async function doPublish() {
         >
           <div class="flex items-center gap-1.5">
             <span class="w-[7px] h-[7px] rounded-full shrink-0" :class="STATUS[a.status].dot"></span>
-            <span class="font-mono text-[10px] text-teal">[{{ a.domain }}]</span>
+            <span class="font-mono text-[10px] text-teal">[{{ DOMAIN_LABEL[a.domain] }}]</span>
             <span class="ml-auto font-mono text-[10px] text-faint">{{ a.createdAt }}</span>
           </div>
           <div class="text-[13px] font-medium text-ink mt-1 leading-snug line-clamp-2">{{ a.title }}</div>
@@ -161,7 +162,7 @@ async function doPublish() {
                 {{ STATUS[store.active.status].label }}
               </span>
               <span class="font-mono text-[11px] px-2 py-[3px] rounded-full bg-teal/10 text-[#0f9c84]">{{
-                store.active.domain
+                DOMAIN_LABEL[store.active.domain]
               }}</span>
               <span class="font-mono text-[11px] text-faint">{{ store.active.id }} · {{ store.active.space }}</span>
             </div>

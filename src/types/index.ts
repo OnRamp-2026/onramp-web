@@ -1,23 +1,45 @@
-export type Domain = "장애대응" | "운영매뉴얼" | "API명세" | "회의록" | "기획서";
+/** 도메인 — 백엔드 classifier 영문 키(Domain enum)와 1:1. 화면 표시는 DOMAIN_LABEL 사용. */
+export type Domain = "incident" | "manual" | "api_reference" | "meeting_note" | "planning";
 
-/** 5요소 구조화 답변 (백엔드 FiveElements 계약과 동일) */
+/** 영문 도메인 키 → 한글 표시 라벨 (UX는 한글 유지) */
+export const DOMAIN_LABEL: Record<Domain, string> = {
+  incident: "장애대응",
+  manual: "운영매뉴얼",
+  api_reference: "API명세",
+  meeting_note: "회의록",
+  planning: "기획서",
+};
+
+/** 드롭다운 등 선택 옵션 (영문 값 + 한글 라벨) */
+export const DOMAIN_OPTIONS: { value: Domain; label: string }[] = (
+  Object.keys(DOMAIN_LABEL) as Domain[]
+).map((value) => ({ value, label: DOMAIN_LABEL[value] }));
+
+/** 답변 가능성 상태 — 백엔드 AnswerabilityStatus enum과 동일 */
+export type AnswerabilityStatus =
+  | "answerable" // 근거 충분 → 일반 답변
+  | "partially_answerable" // 부분 근거 → 한계 명시 답변
+  | "not_enough_evidence" // 근거 부족 → 보류 + 추가 검색 안내
+  | "conflicting_evidence" // 문서 충돌 → 버전 확인 요청
+  | "outdated_evidence"; // 최신 문서 부재 → 제한 답변
+
+/** 5요소 구조화 답변 (백엔드 FiveElementsResponse 계약과 동일) */
 export interface FiveElements {
   situation: string; // 현재 상황
   cause: string; // 원인
   evidence: string; // 근거
   solution: string; // 해결
-  infra: string; // 인프라 맥락
+  infra_context: string; // 인프라 맥락
 }
 
-/** 출처 문서 (백엔드 SourceDocument 매핑) */
+/** 출처 문서 — 백엔드 SourceDoc 계약과 동일 */
 export interface SourceDoc {
-  id: string; // 예: KB-1042
   title: string;
+  url: string; // Confluence 원문 URL
+  space_key: string; // Confluence space, 예: OPS
+  content_snippet: string; // 본문 일부 (추적성)
   score: number; // rerank/유사도
-  domain: Domain;
-  space: string;
-  updated: string;
-  preview?: { heading: string; body: string }[];
+  domain?: Domain; // 표시 보조 (백엔드 ChatResponse는 source별 domain 미제공)
 }
 
 export interface UserMessage {
@@ -27,12 +49,15 @@ export interface UserMessage {
   perm?: string;
 }
 
+/** 챗봇 답변 — 백엔드 ChatResponse 계약과 정합 */
 export interface AssistantMessage {
   role: "assistant";
-  domain: Domain;
-  confidence: number;
+  domain: Domain; // 영문 키 (표시는 DOMAIN_LABEL)
+  answerability_status: AnswerabilityStatus;
+  answerability_reason: string;
   five: FiveElements;
   sources: SourceDoc[];
+  model_used?: string;
 }
 
 export type ChatMessage = UserMessage | AssistantMessage;

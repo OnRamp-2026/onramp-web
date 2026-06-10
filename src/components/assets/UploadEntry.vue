@@ -4,6 +4,7 @@ import { useAssetsStore } from "@/stores/assets";
 import { DOMAINS, SEVERITIES } from "@/api/assets";
 import FlowStepper from "@/components/assets/FlowStepper.vue";
 import type { Domain, Severity, UploadForm } from "@/types";
+import { DOMAIN_LABEL } from "@/types";
 
 const store = useAssetsStore();
 
@@ -20,7 +21,7 @@ const hasFile = computed(() => !!fileName.value && !fileError.value);
 const incidentId = ref("");
 const author = ref("");
 const occurredAt = ref("");
-const domain = ref<Domain>("장애대응");
+const domain = ref<Domain>("incident");
 const severity = ref<Severity>("P1");
 
 function pick() {
@@ -175,7 +176,7 @@ const fieldCls =
               <div>
                 <label class="block text-[12px] font-medium text-slate mb-1.5">도메인 <span class="text-blue">*</span></label>
                 <select v-model="domain" :class="fieldCls">
-                  <option v-for="d in DOMAINS" :key="d" :value="d">{{ d }}</option>
+                  <option v-for="d in DOMAINS" :key="d" :value="d">{{ DOMAIN_LABEL[d] }}</option>
                 </select>
               </div>
               <div>
