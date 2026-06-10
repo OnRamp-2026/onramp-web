@@ -2,8 +2,36 @@ import type { AuthProvider, AuthUser } from "@/types";
 
 /**
  * 인증은 회사 IdP(Keycloak/Entra/Slack 등)에 OIDC 위임 — OnRamp는 비밀번호를 저장하지 않는다.
- * 본 모듈은 데모용 mock: 실배포 시 OIDC callback의 토큰 claim → AuthUser 매핑으로 교체.
+ * VITE_AUTH_MOCK=true(기본): mock 시연 / false: 백엔드 OIDC 클라이언트(RP) 실 연동.
  */
+const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+/** mock 시연 토글. false면 백엔드 /auth/* (Keycloak 위임)로 실 redirect. */
+export const AUTH_MOCK = (import.meta.env.VITE_AUTH_MOCK ?? "true") === "true";
+
+/** 실 OIDC: 백엔드 RP(/auth/login)로 이동 → Keycloak authorize로 이어짐. (RP는 onramp-api, 인증 서버 아님) */
+export function loginRedirect(provider: AuthProvider) {
+  const ret = encodeURIComponent(location.pathname + location.search);
+  window.location.href = `${BASE}/auth/login?provider=${provider}&redirect=${ret}`;
+}
+
+/** 실 OIDC: 백엔드 세션 쿠키 기준 현재 사용자 복원(callback 복귀·새로고침 시). */
+export async function fetchSession(): Promise<AuthUser | null> {
+  try {
+    const res = await fetch(`${BASE}/auth/me`, { credentials: "include" });
+    return res.ok ? ((await res.json()) as AuthUser) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 실 OIDC: 백엔드 세션 종료(IdP 세션은 IdP 정책에 따름). */
+export async function logoutSession(): Promise<void> {
+  try {
+    await fetch(`${BASE}/auth/logout`, { method: "POST", credentials: "include" });
+  } catch {
+    /* 무시 — 로컬 세션은 store에서 비움 */
+  }
+}
 
 export const PROVIDERS: { id: AuthProvider; label: string; sub: string; icon: string }[] = [
   { id: "sso", label: "회사 SSO로 로그인", sub: "OIDC · Keycloak / Entra ID", icon: "🔐" },

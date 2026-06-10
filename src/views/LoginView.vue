@@ -3,7 +3,7 @@ import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import BrandLogo from "@/components/brand/BrandLogo.vue";
 import { useAuthStore } from "@/stores/auth";
-import { DEMO_ACCOUNTS, PROVIDERS, ROLE_META } from "@/api/auth";
+import { AUTH_MOCK, DEMO_ACCOUNTS, loginRedirect, PROVIDERS, ROLE_META } from "@/api/auth";
 import type { AuthProvider } from "@/types";
 
 const auth = useAuthStore();
@@ -14,8 +14,10 @@ const provider = ref<AuthProvider | null>(null);
 const chosen = computed(() => PROVIDERS.find((p) => p.id === provider.value));
 const accounts = computed(() => DEMO_ACCOUNTS); // 실연동 시 IdP가 단일 신원 반환
 
-function pick(provId: AuthProvider) {
-  provider.value = provId;
+/** mock: 계정 선택 화면으로 / 실 OIDC: 백엔드 RP로 redirect(Keycloak 위임) */
+function onProvider(provId: AuthProvider) {
+  if (AUTH_MOCK) provider.value = provId;
+  else loginRedirect(provId);
 }
 function signIn(accountId: string) {
   const account = DEMO_ACCOUNTS.find((a) => a.id === accountId);
@@ -96,7 +98,7 @@ const EDGES: { x1: number; y1: number; x2: number; y2: number; sig: boolean }[] 
         <!-- 1단계: IdP 선택 -->
         <template v-if="!provider">
           <div class="lr-head">
-            <span class="lr-kicker">SIGN IN</span>
+            <span class="lr-kicker">SIGN IN<span v-if="AUTH_MOCK" class="lr-demo">demo · mock IdP</span></span>
             <h1>로그인</h1>
             <p>회사 IdP에 위임됩니다 — 비밀번호는 저장하지 않습니다.</p>
           </div>
@@ -105,7 +107,7 @@ const EDGES: { x1: number; y1: number; x2: number; y2: number; sig: boolean }[] 
             :key="p.id"
             class="lr-prov lr-rise"
             :style="{ animationDelay: 0.18 + i * 0.07 + 's' }"
-            @click="pick(p.id)"
+            @click="onProvider(p.id)"
           >
             <span class="lr-prov-ic">{{ p.icon }}</span>
             <span class="lr-prov-txt">
@@ -277,11 +279,22 @@ const EDGES: { x1: number; y1: number; x2: number; y2: number; sig: boolean }[] 
   margin-bottom: 18px;
 }
 .lr-kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-family: "JetBrains Mono", monospace;
   font-size: 10px;
   letter-spacing: 0.22em;
   color: #1fc7ac;
   font-weight: 600;
+}
+.lr-demo {
+  letter-spacing: 0.04em;
+  font-weight: 500;
+  color: #93a1b3;
+  background: rgba(22, 33, 62, 0.06);
+  padding: 1px 7px;
+  border-radius: 999px;
 }
 .lr-head h1 {
   font-family: "Poppins", sans-serif;
