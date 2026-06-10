@@ -125,3 +125,29 @@ export interface UploadForm {
   domain: Domain;
   severity: Severity;
 }
+
+/* ───────────── 인증 · 인가 (IdP 위임 · 테넌트 · 역할) ───────────── */
+
+/** 역할 — Reader(검색·소비, 전원) / Curator(자산 생산·검수·등록, 작성 담당자) */
+export type UserRole = "reader" | "curator";
+
+/** 로그인에 사용한 IdP (실배포 시 회사 SSO로 교체) */
+export type AuthProvider = "sso" | "slack";
+
+/** 테넌트 = 부서. team_id/org claim → 이 테넌트의 KB만 조회(인가 Layer 1) */
+export interface AuthTenant {
+  id: string; // 예: platform-ops
+  label: string; // 예: 플랫폼운영팀
+}
+
+/** 로그인 사용자 — IdP 토큰 claim에서 매핑(비밀번호 미보관) */
+export interface AuthUser {
+  id: string; // IdP sub / slack user_id
+  name: string;
+  email: string;
+  initial: string; // 아바타 글자
+  tenant: AuthTenant; // 부서(테넌트)
+  role: UserRole; // 인가 Layer 2
+  tenure: string; // 표시용 (예: "신규 입사 · 2일차")
+  provider: AuthProvider;
+}
