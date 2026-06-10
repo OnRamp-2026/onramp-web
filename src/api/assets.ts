@@ -10,11 +10,11 @@ export const ELEMENTS: { key: keyof FiveElements; num: string; label: string; hi
   { key: "cause", num: "02", label: "원인", hint: "근본 원인은 무엇인가" },
   { key: "evidence", num: "03", label: "근거", hint: "어떤 로그·지표·문서로 확인했는가" },
   { key: "solution", num: "04", label: "해결", hint: "어떻게 조치했는가" },
-  { key: "infra", num: "05", label: "인프라 맥락", hint: "재발 방지·환경 특이사항" },
+  { key: "infra_context", num: "05", label: "인프라 맥락", hint: "재발 방지·환경 특이사항" },
 ];
 
-/** 도메인 5종 (분류 택소노미) */
-export const DOMAINS: Domain[] = ["장애대응", "운영매뉴얼", "API명세", "회의록", "기획서"];
+/** 도메인 5종 (분류 택소노미) — 영문 키, 화면 표시는 DOMAIN_LABEL */
+export const DOMAINS: Domain[] = ["incident", "manual", "api_reference", "meeting_note", "planning"];
 
 /** 심각도 P1~P3 */
 export const SEVERITIES: { value: Severity; label: string }[] = [
@@ -36,7 +36,7 @@ export const FLOW_STEPS = [
 const ASSET_REVIEW: AssetReport = {
   id: "AST-2041",
   title: "EKS Pod CrashLoopBackOff 장애 대응",
-  domain: "장애대응",
+  domain: "incident",
   space: "OPS",
   status: "review",
   createdAt: "12분 전",
@@ -59,7 +59,7 @@ const ASSET_REVIEW: AssetReport = {
       "kubectl describe pod 이벤트의 OOMKilled, kubectl logs --previous의 종료 직전 스택트레이스, Datadog 메모리 그래프의 한도 도달 구간으로 확인했다.",
     solution:
       "limits.memory를 512Mi로 상향하고 liveness probe initialDelay를 15s로 완화한 뒤 롤아웃하여 안정화했다. 노드 capacity 여유를 함께 확인했다.",
-    infra:
+    infra_context:
       "클러스터가 t3.medium 2노드로 메모리 여유가 크지 않다. 동일 패턴 재발 방지를 위해 결제 워크로드의 request/limit 기준값을 운영 표준에 반영할 것.",
   },
 };
@@ -67,7 +67,7 @@ const ASSET_REVIEW: AssetReport = {
 const ASSET_PUBLISHED: AssetReport = {
   id: "AST-2038",
   title: "ArgoCD 동기화 실패 롤백 절차",
-  domain: "운영매뉴얼",
+  domain: "manual",
   space: "OPS",
   status: "published",
   createdAt: "2일 전",
@@ -86,7 +86,7 @@ const ASSET_PUBLISHED: AssetReport = {
     cause: "gitops 리포의 매니페스트와 클러스터 실제 상태가 충돌(수동 변경 흔적)하여 sync가 차단됨.",
     evidence: "ArgoCD UI의 diff 뷰, app-of-apps 상위 Application의 degraded 상태로 확인.",
     solution: "diff 확인 후 직전 정상 리비전으로 롤백(rollback to previous), 수동 변경분을 gitops에 역반영.",
-    infra: "auto-sync는 selfHeal=false 유지. 긴급 롤백 권한은 운영팀으로 제한.",
+    infra_context: "auto-sync는 selfHeal=false 유지. 긴급 롤백 권한은 운영팀으로 제한.",
   },
 };
 
@@ -127,11 +127,12 @@ export async function generateDraft(form: UploadForm): Promise<AssetReport> {
         cause: "(초안) 추정 원인입니다. 근거와 함께 확정하세요.",
         evidence: "(초안) 확인에 사용한 로그·지표·문서를 채우세요.",
         solution: "(초안) 실제 조치 내용을 정리하세요.",
-        infra: "(초안) 재발 방지·환경 특이사항을 정리하세요.",
+        infra_context: "(초안) 재발 방지·환경 특이사항을 정리하세요.",
       },
     };
   }
-  // 실연동: return mapAsset(await post("/v1/asset", form));
+  // 실연동: const category = DOMAIN_LABEL[form.domain]; // 백엔드 AssetRequest.category는 한글
+  // return mapAsset(await post("/v1/asset", { ...form, category }));
   throw new Error("백엔드 미연동 — VITE_USE_MOCK=true 로 두세요");
 }
 
