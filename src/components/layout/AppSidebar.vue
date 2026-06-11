@@ -1,21 +1,12 @@
 <script setup lang="ts">
-import { computed } from "vue";
 import BrandLogo from "@/components/brand/BrandLogo.vue";
 import { NAV } from "@/router";
 import { HISTORY } from "@/api/mock";
-import { ROLE_META } from "@/api/auth";
 import { useAuthStore } from "@/stores/auth";
-import type { UserRole } from "@/types";
 
 const auth = useAuthStore();
 const idle = "text-slate hover:bg-navy/5 hover:text-ink";
 const active = "bg-blue/10 text-[#1668b3] font-semibold";
-
-/** 인가 Layer 2 — Curator 전용 메뉴는 Reader에게 잠금 표시 */
-function locked(role?: UserRole) {
-  return role === "curator" && !auth.isCurator;
-}
-const roleMeta = computed(() => (auth.user ? ROLE_META[auth.user.role] : null));
 </script>
 
 <template>
@@ -33,26 +24,15 @@ const roleMeta = computed(() => (auth.user ? ROLE_META[auth.user.role] : null));
     </button>
 
     <nav class="flex flex-col gap-0.5 mb-5">
-      <template v-for="n in NAV" :key="n.path">
-        <!-- Curator 전용인데 Reader면 잠금(클릭 불가) -->
-        <div
-          v-if="locked(n.role)"
-          class="flex items-center gap-3 px-2.5 py-2.5 rounded-lg text-sm font-medium text-faint/70 cursor-not-allowed select-none"
-          :title="`${ROLE_META.curator.label} 전용 — 작성 담당자만 자산을 등록할 수 있습니다`"
+      <RouterLink v-for="n in NAV" :key="n.path" :to="n.path" custom v-slot="{ isActive, navigate }">
+        <a
+          @click="navigate"
+          class="flex items-center gap-3 px-2.5 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition"
+          :class="isActive ? active : idle"
         >
           <span class="w-[18px] text-center text-[15px]">{{ n.icon }}</span>{{ n.label }}
-          <span class="ml-auto text-[12px]">🔒</span>
-        </div>
-        <RouterLink v-else :to="n.path" custom v-slot="{ isActive, navigate }">
-          <a
-            @click="navigate"
-            class="flex items-center gap-3 px-2.5 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition"
-            :class="isActive ? active : idle"
-          >
-            <span class="w-[18px] text-center text-[15px]">{{ n.icon }}</span>{{ n.label }}
-          </a>
-        </RouterLink>
-      </template>
+        </a>
+      </RouterLink>
     </nav>
 
     <div class="font-mono text-[10px] tracking-[0.1em] uppercase text-faint px-2.5 pb-2">최근 대화</div>
@@ -74,14 +54,7 @@ const roleMeta = computed(() => (auth.user ? ROLE_META[auth.user.role] : null));
           {{ auth.user.initial }}
         </div>
         <div class="min-w-0">
-          <div class="flex items-center gap-1.5">
-            <span class="text-[13px] font-semibold truncate">{{ auth.user.name }}</span>
-            <span
-              class="font-mono text-[9.5px] px-1.5 py-px rounded-full shrink-0"
-              :class="auth.isCurator ? 'bg-teal/10 text-[#0f9c84]' : 'border border-line2 text-slate'"
-              >{{ roleMeta?.label }}</span
-            >
-          </div>
+          <div class="text-[13px] font-semibold truncate">{{ auth.user.name }}</div>
           <div class="text-[11px] text-faint font-mono truncate">{{ auth.user.tenure }}</div>
         </div>
         <button

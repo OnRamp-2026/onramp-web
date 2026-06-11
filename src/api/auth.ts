@@ -38,8 +38,7 @@ export const PROVIDERS: { id: AuthProvider; label: string; sub: string; icon: st
   { id: "slack", label: "Slack으로 로그인", sub: "Slack 계정 · 이중 로그인 없음", icon: "💬" },
 ];
 
-/** 데모 계정 — IdP가 돌려줄 신원을 흉내. 테넌트(회사)·역할이 서로 다름을 시연.
- *  누리클라우드: Reader(김신입)·Curator(박운영) / 한별테크: Reader(이데이터) — 회사 간 KB 격리. */
+/** 데모 계정 — IdP가 돌려줄 신원을 흉내. 회사(테넌트)가 서로 다름을 시연(누리클라우드 2명 / 한별테크 1명 → 회사 간 KB 격리). */
 export const DEMO_ACCOUNTS: AuthUser[] = [
   {
     id: "U-2025-114",
@@ -47,7 +46,6 @@ export const DEMO_ACCOUNTS: AuthUser[] = [
     email: "newbie@corp.local",
     initial: "신",
     tenant: { id: "nuri", label: "누리클라우드" },
-    role: "reader",
     tenure: "신규 입사 · 2일차",
     provider: "sso",
   },
@@ -57,7 +55,6 @@ export const DEMO_ACCOUNTS: AuthUser[] = [
     email: "ops.lead@corp.local",
     initial: "운",
     tenant: { id: "nuri", label: "누리클라우드" },
-    role: "curator",
     tenure: "운영 담당 · 6년차",
     provider: "sso",
   },
@@ -67,14 +64,7 @@ export const DEMO_ACCOUNTS: AuthUser[] = [
     email: "data.eng@corp.local",
     initial: "데",
     tenant: { id: "hanbyeol", label: "한별테크" },
-    role: "reader",
     tenure: "데이터팀 · 3년차",
     provider: "slack",
   },
 ];
-
-/** 역할 표시 메타 */
-export const ROLE_META: Record<AuthUser["role"], { label: string; hint: string }> = {
-  reader: { label: "Reader", hint: "검색·열람 (소비)" },
-  curator: { label: "Curator", hint: "자산 검수·등록 (생산)" },
-};

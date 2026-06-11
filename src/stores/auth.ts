@@ -20,8 +20,6 @@ export const useAuthStore = defineStore("auth", () => {
   const ready = ref(AUTH_MOCK); // 실 모드는 /auth/me 응답 후 true
 
   const isAuthenticated = computed(() => user.value !== null);
-  /** 인가 Layer 2 — 자산 생산(검수·등록)은 Curator(작성 담당자)만 */
-  const isCurator = computed(() => user.value?.role === "curator");
 
   /** 앱 진입 시 1회 — 실 모드면 백엔드 세션 쿠키로 사용자 복원 */
   async function init() {
@@ -45,5 +43,5 @@ export const useAuthStore = defineStore("auth", () => {
     localStorage.removeItem(KEY);
   }
 
-  return { user, ready, isAuthenticated, isCurator, init, login, logout };
+  return { user, ready, isAuthenticated, init, login, logout };
 });

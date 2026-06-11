@@ -126,15 +126,13 @@ export interface UploadForm {
   severity: Severity;
 }
 
-/* ───────────── 인증 · 인가 (IdP 위임 · 테넌트 · 역할) ───────────── */
+/* ───────────── 인증 · 인가 (IdP 위임 · 테넌트(회사)) ─────────────
+ * 인가 = 테넌트(회사) 격리 + Confluence 접근 권한 위임. 별도 역할(Reader/Curator) 층 없음(6/11). */
 
-/** 역할 — Reader(검색·소비, 전원) / Curator(자산 생산·검수·등록, 작성 담당자) */
-export type UserRole = "reader" | "curator";
-
-/** 로그인에 사용한 IdP (실배포 시 회사 SSO로 교체) */
+/** 로그인에 사용한 IdP (슬랙 우선, 회사 SSO로 교체 가능) */
 export type AuthProvider = "sso" | "slack";
 
-/** 테넌트 = 회사(고객사). 슬랙 team_id/org claim → 이 회사의 KB만 조회(인가 Layer 1). 회사 내부 부서 권한은 별도 층 */
+/** 테넌트 = 회사(고객사). 슬랙 team_id/org claim → 이 회사의 KB만 조회(인가 Layer 1). */
 export interface AuthTenant {
   id: string; // 예: nuri (슬랙 워크스페이스/회사)
   label: string; // 예: 누리클라우드
@@ -147,7 +145,6 @@ export interface AuthUser {
   email: string;
   initial: string; // 아바타 글자
   tenant: AuthTenant; // 회사(테넌트)
-  role: UserRole; // 인가 Layer 2
   tenure: string; // 표시용 (예: "신규 입사 · 2일차")
   provider: AuthProvider;
 }

@@ -3,7 +3,7 @@ import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import BrandLogo from "@/components/brand/BrandLogo.vue";
 import { useAuthStore } from "@/stores/auth";
-import { AUTH_MOCK, DEMO_ACCOUNTS, loginRedirect, PROVIDERS, ROLE_META } from "@/api/auth";
+import { AUTH_MOCK, DEMO_ACCOUNTS, loginRedirect, PROVIDERS } from "@/api/auth";
 import type { AuthProvider } from "@/types";
 
 const auth = useAuthStore();
@@ -137,9 +137,9 @@ const EDGES: { x1: number; y1: number; x2: number; y2: number; sig: boolean }[] 
             <span class="lr-acc-txt">
               <span class="lr-acc-top">
                 <span class="lr-acc-name">{{ a.name }}</span>
-                <span class="lr-role" :class="a.role === 'curator' ? 'lr-role--cur' : ''">{{ ROLE_META[a.role].label }}</span>
+                <span class="lr-acc-company">{{ a.tenant.label }}</span>
               </span>
-              <span class="lr-acc-meta">{{ a.tenant.label }} · {{ a.tenure }}</span>
+              <span class="lr-acc-meta">{{ a.tenure }}</span>
             </span>
             <span class="lr-prov-go">→</span>
           </button>
@@ -149,7 +149,7 @@ const EDGES: { x1: number; y1: number; x2: number; y2: number; sig: boolean }[] 
       <div class="lr-foot lr-rise lr-d2">
         <span><b>인증</b> IdP 위임(OIDC)</span>
         <span class="lr-dot" />
-        <span><b>인가</b> 테넌트(회사 KB) × 역할(Reader/Curator)</span>
+        <span><b>인가</b> 테넌트(회사 KB) × Confluence 권한</span>
         <span class="lr-dot" />
         <span>인증 서버 없음</span>
       </div>
@@ -454,18 +454,14 @@ const EDGES: { x1: number; y1: number; x2: number; y2: number; sig: boolean }[] 
   font-weight: 600;
   color: #16213e;
 }
-.lr-role {
+.lr-acc-company {
   font-family: "JetBrains Mono", monospace;
   font-size: 10px;
   padding: 1px 7px;
   border-radius: 999px;
-  border: 1px solid #d4deea;
-  color: #566579;
-}
-.lr-role--cur {
-  border-color: transparent;
-  background: rgba(31, 199, 172, 0.12);
-  color: #0f9c84;
+  border: 1px solid transparent;
+  background: rgba(62, 155, 233, 0.1);
+  color: #1668b3;
 }
 .lr-acc-meta {
   display: block;
