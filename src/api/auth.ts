@@ -38,14 +38,15 @@ export const PROVIDERS: { id: AuthProvider; label: string; sub: string; icon: st
   { id: "slack", label: "Slack으로 로그인", sub: "Slack 계정 · 이중 로그인 없음", icon: "💬" },
 ];
 
-/** 데모 계정 — IdP가 돌려줄 신원을 흉내. 테넌트(부서)·역할이 서로 다름을 시연. */
+/** 데모 계정 — IdP가 돌려줄 신원을 흉내. 테넌트(회사)·역할이 서로 다름을 시연.
+ *  누리클라우드: Reader(김신입)·Curator(박운영) / 한별테크: Reader(이데이터) — 회사 간 KB 격리. */
 export const DEMO_ACCOUNTS: AuthUser[] = [
   {
     id: "U-2025-114",
     name: "김신입",
     email: "newbie@corp.local",
     initial: "신",
-    tenant: { id: "platform-ops", label: "플랫폼운영팀" },
+    tenant: { id: "nuri", label: "누리클라우드" },
     role: "reader",
     tenure: "신규 입사 · 2일차",
     provider: "sso",
@@ -55,7 +56,7 @@ export const DEMO_ACCOUNTS: AuthUser[] = [
     name: "박운영",
     email: "ops.lead@corp.local",
     initial: "운",
-    tenant: { id: "platform-ops", label: "플랫폼운영팀" },
+    tenant: { id: "nuri", label: "누리클라우드" },
     role: "curator",
     tenure: "운영 담당 · 6년차",
     provider: "sso",
@@ -65,7 +66,7 @@ export const DEMO_ACCOUNTS: AuthUser[] = [
     name: "이데이터",
     email: "data.eng@corp.local",
     initial: "데",
-    tenant: { id: "data-platform", label: "데이터플랫폼팀" },
+    tenant: { id: "hanbyeol", label: "한별테크" },
     role: "reader",
     tenure: "데이터팀 · 3년차",
     provider: "slack",

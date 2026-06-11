@@ -134,10 +134,10 @@ export type UserRole = "reader" | "curator";
 /** 로그인에 사용한 IdP (실배포 시 회사 SSO로 교체) */
 export type AuthProvider = "sso" | "slack";
 
-/** 테넌트 = 부서. team_id/org claim → 이 테넌트의 KB만 조회(인가 Layer 1) */
+/** 테넌트 = 회사(고객사). 슬랙 team_id/org claim → 이 회사의 KB만 조회(인가 Layer 1). 회사 내부 부서 권한은 별도 층 */
 export interface AuthTenant {
-  id: string; // 예: platform-ops
-  label: string; // 예: 플랫폼운영팀
+  id: string; // 예: nuri (슬랙 워크스페이스/회사)
+  label: string; // 예: 누리클라우드
 }
 
 /** 로그인 사용자 — IdP 토큰 claim에서 매핑(비밀번호 미보관) */
@@ -146,7 +146,7 @@ export interface AuthUser {
   name: string;
   email: string;
   initial: string; // 아바타 글자
-  tenant: AuthTenant; // 부서(테넌트)
+  tenant: AuthTenant; // 회사(테넌트)
   role: UserRole; // 인가 Layer 2
   tenure: string; // 표시용 (예: "신규 입사 · 2일차")
   provider: AuthProvider;

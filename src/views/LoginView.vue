@@ -149,7 +149,7 @@ const EDGES: { x1: number; y1: number; x2: number; y2: number; sig: boolean }[] 
       <div class="lr-foot lr-rise lr-d2">
         <span><b>인증</b> IdP 위임(OIDC)</span>
         <span class="lr-dot" />
-        <span><b>인가</b> 테넌트(부서 KB) × 역할(Reader/Curator)</span>
+        <span><b>인가</b> 테넌트(회사 KB) × 역할(Reader/Curator)</span>
         <span class="lr-dot" />
         <span>인증 서버 없음</span>
       </div>

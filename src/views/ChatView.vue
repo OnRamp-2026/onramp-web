@@ -19,7 +19,7 @@ const auth = useAuthStore();
       <span
         v-if="auth.user"
         class="flex items-center gap-1.5 font-mono text-[11px] px-2.5 py-[3px] rounded-full bg-teal/10 text-[#0f9c84]"
-        title="질의는 소속 부서(테넌트) KB로 스코프됩니다"
+        title="질의는 소속 회사(테넌트) KB로 스코프됩니다"
       >
         ▣ {{ auth.user.tenant.label }} KB
       </span>
