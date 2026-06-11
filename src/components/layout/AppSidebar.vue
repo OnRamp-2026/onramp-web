@@ -2,7 +2,9 @@
 import BrandLogo from "@/components/brand/BrandLogo.vue";
 import { NAV } from "@/router";
 import { HISTORY } from "@/api/mock";
+import { useAuthStore } from "@/stores/auth";
 
+const auth = useAuthStore();
 const idle = "text-slate hover:bg-navy/5 hover:text-ink";
 const active = "bg-blue/10 text-[#1668b3] font-semibold";
 </script>
@@ -45,11 +47,28 @@ const active = "bg-blue/10 text-[#1668b3] font-semibold";
       </div>
     </div>
 
-    <div class="border-t border-line pt-3 mt-2 flex items-center gap-2.5">
-      <div class="w-[30px] h-[30px] rounded-[9px] bg-grad text-white grid place-items-center font-bold text-[13px]">정</div>
-      <div>
-        <div class="text-[13px] font-semibold">양정우</div>
-        <div class="text-[11px] text-faint font-mono">신규 입사 · 2일차</div>
+    <!-- 로그인 사용자 (인증 위임 결과) -->
+    <div v-if="auth.user" class="border-t border-line pt-3 mt-2">
+      <div class="flex items-center gap-2.5">
+        <div class="w-[30px] h-[30px] rounded-[9px] bg-grad text-white grid place-items-center font-bold text-[13px]">
+          {{ auth.user.initial }}
+        </div>
+        <div class="min-w-0">
+          <div class="text-[13px] font-semibold truncate">{{ auth.user.name }}</div>
+          <div class="text-[11px] text-faint font-mono truncate">{{ auth.user.tenure }}</div>
+        </div>
+        <button
+          class="ml-auto text-faint hover:text-ink text-[15px] shrink-0"
+          title="로그아웃"
+          @click="auth.logout()"
+        >
+          ⏻
+        </button>
+      </div>
+      <!-- 인가 Layer 1 — 이 사용자가 보는 KB(테넌트) -->
+      <div class="mt-2 flex items-center gap-1.5 font-mono text-[10px] text-slate bg-navy/[0.03] rounded-lg px-2 py-1.5">
+        <span class="text-teal">▣</span> KB: {{ auth.user.tenant.label }}
+        <span class="ml-auto text-faint">via {{ auth.user.provider === "slack" ? "Slack" : "SSO" }}</span>
       </div>
     </div>
   </aside>

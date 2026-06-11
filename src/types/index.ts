@@ -125,3 +125,26 @@ export interface UploadForm {
   domain: Domain;
   severity: Severity;
 }
+
+/* ───────────── 인증 · 인가 (IdP 위임 · 테넌트(회사)) ─────────────
+ * 인가 = 테넌트(회사) 격리 + Confluence 접근 권한 위임. 별도 역할(Reader/Curator) 층 없음(6/11). */
+
+/** 로그인에 사용한 IdP (슬랙 우선, 회사 SSO로 교체 가능) */
+export type AuthProvider = "sso" | "slack";
+
+/** 테넌트 = 회사(고객사). 슬랙 team_id/org claim → 이 회사의 KB만 조회(인가 Layer 1). */
+export interface AuthTenant {
+  id: string; // 예: nuri (슬랙 워크스페이스/회사)
+  label: string; // 예: 누리클라우드
+}
+
+/** 로그인 사용자 — IdP 토큰 claim에서 매핑(비밀번호 미보관) */
+export interface AuthUser {
+  id: string; // IdP sub / slack user_id
+  name: string;
+  email: string;
+  initial: string; // 아바타 글자
+  tenant: AuthTenant; // 회사(테넌트)
+  tenure: string; // 표시용 (예: "신규 입사 · 2일차")
+  provider: AuthProvider;
+}

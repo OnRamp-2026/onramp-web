@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router";
 import ChatView from "@/views/ChatView.vue";
 
+/** 전 메뉴 전원 접근 — 인가는 테넌트(회사) + Confluence 권한으로, 별도 역할 게이트 없음(6/11). */
 export const NAV: { path: string; icon: string; label: string }[] = [
   { path: "/chat", icon: "💬", label: "챗봇" },
   { path: "/galaxy", icon: "🌌", label: "프로젝트 맵" },

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { useChatStore } from "@/stores/chat";
+import { useAuthStore } from "@/stores/auth";
 import AnswerCard from "@/components/chat/AnswerCard.vue";
 import SourceModal from "@/components/chat/SourceModal.vue";
 import ModelSelector from "@/components/chat/ModelSelector.vue";
 import ChatComposer from "@/components/chat/ChatComposer.vue";
 
 const chat = useChatStore();
+const auth = useAuthStore();
 </script>
 
 <template>
@@ -14,6 +16,13 @@ const chat = useChatStore();
       <span class="font-geo text-base font-semibold text-navy">장애 대응</span>
       <span class="font-mono text-[11px] text-faint">/ EKS Pod CrashLoopBackOff</span>
       <span class="flex-1"></span>
+      <span
+        v-if="auth.user"
+        class="flex items-center gap-1.5 font-mono text-[11px] px-2.5 py-[3px] rounded-full bg-teal/10 text-[#0f9c84]"
+        title="질의는 소속 회사(테넌트) KB로 스코프됩니다"
+      >
+        ▣ {{ auth.user.tenant.label }} KB
+      </span>
       <span class="flex items-center gap-1.5 font-mono text-[11px] text-slate">
         <span class="w-[7px] h-[7px] rounded-full bg-ok pulse"></span> 색인 최신 · 09:00
       </span>
