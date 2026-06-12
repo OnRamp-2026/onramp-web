@@ -114,11 +114,11 @@ export interface AssetReport {
   confluenceUrl?: string; // 등록 후 부여
 }
 
-/** 업로드 진입 폼 (단계 1) */
+/** 업로드 진입 폼 (단계 1) — 음성 녹취 파일 업로드 → STT 전사 → 5요소 보고서 */
 export interface UploadForm {
   fileName: string;
   fileSize: number; // bytes
-  content: string; // 텍스트 원문
+  file: File | null; // 녹취 음성 파일 (오브젝트 스토리지 업로드 → onramp-stt-api 전사)
   incidentId: string;
   author: string;
   occurredAt: string;

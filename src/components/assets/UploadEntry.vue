@@ -8,10 +8,12 @@ import { DOMAIN_LABEL } from "@/types";
 
 const store = useAssetsStore();
 
-// 파일
+// 파일 (음성 녹취)
+const AUDIO_RE = /\.(wav|mp3|m4a|webm|flac|ogg|aac)$/i;
+const MAX_BYTES = 100 * 1024 * 1024; // 100MB
 const fileName = ref("");
 const fileSize = ref(0);
-const content = ref("");
+const file = ref<File | null>(null);
 const fileError = ref("");
 const dragging = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
@@ -31,26 +33,23 @@ function handleFiles(files: FileList | null) {
   const f = files?.[0];
   if (!f) return;
   fileError.value = "";
-  if (!/\.(txt|md)$/i.test(f.name)) {
-    fileError.value = "txt · md 텍스트 파일만 업로드할 수 있습니다";
+  if (!AUDIO_RE.test(f.name) && !f.type.startsWith("audio/")) {
+    fileError.value = "wav · mp3 · m4a 등 음성 파일만 업로드할 수 있습니다";
     return;
   }
-  if (f.size > 1024 * 1024) {
-    fileError.value = "최대 1MB까지 업로드할 수 있습니다";
+  if (f.size > MAX_BYTES) {
+    fileError.value = "최대 100MB까지 업로드할 수 있습니다 (긴 녹취는 mp3·m4a 압축 권장)";
     return;
   }
-  const reader = new FileReader();
-  reader.onload = () => {
-    content.value = String(reader.result ?? "");
-    fileName.value = f.name;
-    fileSize.value = f.size;
-    // 파일명으로 장애 ID 힌트 자동 채움
-    if (!incidentId.value) {
-      const m = f.name.match(/[A-Za-z]+-\d{4}-\d{2,4}[-\w]*/);
-      if (m) incidentId.value = m[0].toUpperCase();
-    }
-  };
-  reader.readAsText(f);
+  // 음성은 텍스트로 읽지 않고 파일 객체를 보관 → 업로드(실연동 시 multipart)
+  file.value = f;
+  fileName.value = f.name;
+  fileSize.value = f.size;
+  // 파일명으로 장애 ID 힌트 자동 채움
+  if (!incidentId.value) {
+    const m = f.name.match(/[A-Za-z]+-\d{4}-\d{2,4}[-\w]*/);
+    if (m) incidentId.value = m[0].toUpperCase();
+  }
 }
 function onDrop(e: DragEvent) {
   dragging.value = false;
@@ -59,7 +58,7 @@ function onDrop(e: DragEvent) {
 function clearFile() {
   fileName.value = "";
   fileSize.value = 0;
-  content.value = "";
+  file.value = null;
   fileError.value = "";
 }
 
@@ -70,7 +69,7 @@ function submit() {
   const form: UploadForm = {
     fileName: fileName.value,
     fileSize: fileSize.value,
-    content: content.value,
+    file: file.value,
     incidentId: incidentId.value.trim(),
     author: author.value.trim(),
     occurredAt: occurredAt.value.trim() || "—",
@@ -112,10 +111,10 @@ const fieldCls =
             @dragleave.prevent="dragging = false"
             @drop.prevent="onDrop"
           >
-            <input ref="fileInput" type="file" accept=".txt,.md,text/plain,text/markdown" class="hidden" @change="handleFiles(($event.target as HTMLInputElement).files)" />
+            <input ref="fileInput" type="file" accept="audio/*,.wav,.mp3,.m4a,.webm,.flac,.ogg,.aac" class="hidden" @change="handleFiles(($event.target as HTMLInputElement).files)" />
 
             <div class="w-14 h-14 mx-auto mb-4 rounded-2xl grid place-items-center text-2xl transition" :class="hasFile ? 'bg-teal/15' : 'bg-navy/[0.05]'">
-              {{ hasFile ? "📄" : "🗂" }}
+              {{ hasFile ? "🎙" : "🗂" }}
             </div>
             <div class="font-geo text-[16px] font-semibold text-navy">
               {{ dragging ? "여기에 놓으세요" : "파일을 여기로 끌어다 놓으세요" }}
@@ -127,8 +126,8 @@ const fieldCls =
             >
               📁 파일 선택
             </button>
-            <div class="font-mono text-[11px] text-faint mt-4">.txt / .md · 최대 1MB · UTF-8</div>
-            <div class="font-mono text-[11px] text-blue/80 mt-1">음성(STT) → 텍스트 변환은 P2</div>
+            <div class="font-mono text-[11px] text-faint mt-4">wav · mp3 · m4a · webm · 최대 100MB</div>
+            <div class="font-mono text-[11px] text-blue/80 mt-1">업로드 후 STT 전사 → 5요소 보고서 자동 생성</div>
           </div>
 
           <!-- 검증 에러 -->
@@ -144,7 +143,7 @@ const fieldCls =
             <span class="text-base">📎</span>
             <div class="flex-1 min-w-0">
               <div class="text-[13px] font-medium text-ink truncate">{{ fileName }}</div>
-              <div class="font-mono text-[10.5px] text-faint">{{ (fileSize / 1024).toFixed(0) }} KB · UTF-8</div>
+              <div class="font-mono text-[10.5px] text-faint">{{ (fileSize / 1024 / 1024).toFixed(1) }} MB · 녹취 음성</div>
             </div>
             <span class="font-mono text-[11px] text-[#0f9c84] flex items-center gap-1 shrink-0">✓ 검증 OK</span>
             <button class="text-faint hover:text-ink text-lg leading-none shrink-0" @click="clearFile">×</button>
@@ -206,10 +205,10 @@ const fieldCls =
         @click="submit"
       >
         <span v-if="store.generating" class="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin"></span>
-        {{ store.generating ? "5요소 보고서 생성 중…" : "🚀 업로드 + 5요소 보고서 자동 생성" }}
+        {{ store.generating ? "STT 전사 → 5요소 보고서 생성 중…" : "🚀 업로드 + 5요소 보고서 자동 생성" }}
       </button>
       <p class="text-center text-[12px] text-faint mt-3">
-        💡 업로드 후 약 30~60초 내에 보고서 초안이 준비됩니다. HITL 검토 후 Confluence에 등록됩니다.
+        💡 녹취 길이에 따라 STT 전사에 수 분이 걸릴 수 있습니다. 초안 준비 후 HITL 검토를 거쳐 Confluence에 등록됩니다.
       </p>
     </div>
   </div>
