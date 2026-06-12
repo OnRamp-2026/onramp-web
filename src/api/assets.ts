@@ -25,8 +25,8 @@ export const SEVERITIES: { value: Severity; label: string }[] = [
 
 /** 4단계 자동 흐름 (UC-07 → UC-09) */
 export const FLOW_STEPS = [
-  { n: 1, label: "파일 업로드", uc: "UC-07" },
-  { n: 2, label: "5요소 보고서 초안", uc: "UC-08 자동" },
+  { n: 1, label: "녹취 파일 업로드", uc: "UC-07" },
+  { n: 2, label: "STT 전사 → 5요소 초안", uc: "UC-08 자동" },
   { n: 3, label: "HITL 검토", uc: "UC-09 사용" },
   { n: 4, label: "Confluence 등록", uc: "UC-09 자동" },
 ] as const;
@@ -96,11 +96,11 @@ export const MOCK_ASSETS: AssetReport[] = [ASSET_REVIEW, ASSET_PUBLISHED];
 
 let seq = 2043;
 
-/** POST /v1/asset — 업로드(녹취/텍스트) → 5요소 초안 생성 (UC-08) */
+/** POST /v1/asset — 녹취 음성 업로드 → STT 전사 → 5요소 초안 생성 (UC-08) */
 export async function generateDraft(form: UploadForm): Promise<AssetReport> {
   if (USE_MOCK) {
     await delay(1400);
-    const head = form.content.trim().split("\n")[0]?.slice(0, 40) || form.fileName.replace(/\.[^.]+$/, "");
+    const head = form.fileName.replace(/\.[^.]+$/, "");
     return {
       id: `AST-${seq++}`,
       title: head,
@@ -118,12 +118,12 @@ export async function generateDraft(form: UploadForm): Promise<AssetReport> {
       source: {
         kind: "transcript",
         title: form.fileName,
-        meta: `${(form.fileSize / 1024).toFixed(0)} KB · UTF-8 · 검증 OK`,
-        excerpt: form.content.slice(0, 260),
+        meta: `${(form.fileSize / 1024 / 1024).toFixed(1)} MB · 녹취 음성 · STT 전사`,
+        excerpt: "(음성 STT 전사 결과가 여기에 표시됩니다 — mock. 실연동 시 onramp-stt-api 전사 원문 일부가 들어갑니다.)",
       },
       edited: {},
       five: {
-        situation: `(초안) ${head} — 입력 원문에서 추출한 상황 요약입니다. 검토 후 확정하세요.`,
+        situation: `(초안) ${head} — STT 전사 원문에서 추출한 상황 요약입니다. 검토 후 확정하세요.`,
         cause: "(초안) 추정 원인입니다. 근거와 함께 확정하세요.",
         evidence: "(초안) 확인에 사용한 로그·지표·문서를 채우세요.",
         solution: "(초안) 실제 조치 내용을 정리하세요.",
@@ -131,8 +131,15 @@ export async function generateDraft(form: UploadForm): Promise<AssetReport> {
       },
     };
   }
-  // 실연동: const category = DOMAIN_LABEL[form.domain]; // 백엔드 AssetRequest.category는 한글
-  // return mapAsset(await post("/v1/asset", { ...form, category }));
+  // 실연동: 음성 파일 multipart 업로드 → onramp-api가 오브젝트 스토리지 저장 + onramp-stt-api 전사(Redis 비동기)
+  // const fd = new FormData();
+  // fd.append("file", form.file!);                      // 녹취 음성
+  // fd.append("category", DOMAIN_LABEL[form.domain]);   // 백엔드 AssetRequest.category는 한글
+  // fd.append("incident_id", form.incidentId);
+  // fd.append("author", form.author);
+  // fd.append("occurred_at", form.occurredAt);
+  // fd.append("severity", form.severity);
+  // return mapAsset(await post("/v1/asset", fd));
   throw new Error("백엔드 미연동 — VITE_USE_MOCK=true 로 두세요");
 }
 
