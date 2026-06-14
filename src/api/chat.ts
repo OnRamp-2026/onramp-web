@@ -1,6 +1,6 @@
 import type { AssistantMessage, Domain, FiveElements, SourceDoc } from "@/types";
 import { mockAnswerFor } from "@/api/mock";
-// import { post } from "@/api/http";
+import { post } from "@/api/http";
 
 const USE_MOCK = (import.meta.env.VITE_USE_MOCK ?? "true") === "true";
 
@@ -32,13 +32,12 @@ export function mapToAssistantMessage(raw: ChatResponse): AssistantMessage {
  * 백엔드 미연동 단계에서는 mock 답변을 반환한다.
  */
 export async function sendChat(query: string, model: string): Promise<AssistantMessage> {
-  void model; // 실연동 시 LLM Selector로 전달 (ChatRequest.model)
   if (USE_MOCK) {
     await new Promise((r) => setTimeout(r, 450));
     return mockAnswerFor(query);
   }
-  // 실연동 (D Answer/chat_service 완성 후):
-  // const raw = await post<ChatResponse>("/v1/chat", { query, model });
-  // return mapToAssistantMessage(raw);
-  throw new Error("백엔드 미연동 — VITE_USE_MOCK=true 로 두세요");
+  // 백엔드 ChatRequest = {query, model}. model은 LLM Selector가 prefix로 provider 라우팅
+  // (gpt-*→openai / 그 외 비공백→self_hosted). 빈 model이면 백엔드 config 기본값.
+  const raw = await post<ChatResponse>("/v1/chat", { query, model });
+  return mapToAssistantMessage(raw);
 }

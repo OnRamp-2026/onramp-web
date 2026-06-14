@@ -40,6 +40,15 @@ const auth = useAuthStore();
           </div>
           <AnswerCard v-else :msg="m" @open-source="chat.openSource($event)" />
         </template>
+
+        <div
+          v-if="chat.error"
+          class="flex items-start gap-2.5 bg-[#fdecef] border border-[#f3c2cc] text-[#b3344a] rounded-xl px-4 py-3 text-[13px]"
+        >
+          <span class="shrink-0">⚠</span>
+          <div class="flex-1">답변 생성에 실패했습니다 — {{ chat.error }}</div>
+          <button class="shrink-0 text-[#b3344a]/60 hover:text-[#b3344a] leading-none" @click="chat.clearError()">×</button>
+        </div>
       </div>
     </div>
 
