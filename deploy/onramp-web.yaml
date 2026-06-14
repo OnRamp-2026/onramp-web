@@ -1,0 +1,82 @@
+# onramp-web 클러스터 배포 (빠른 E2E용 직접 apply).
+# 정식 GitOps 편입(Helm 차트 + ArgoCD Application, onramp-api 패턴) 은 박지현/현문과 후속.
+#
+# 적용 전 치환할 것:
+#   - <IMAGE_TAG>  : 빌드/푸시한 이미지 태그 (예: git short sha)
+#   - <INGRESS_HOST> : 외부 접근 호스트 (DNS 없으면 ingress LB주소 기반 nip.io 또는 port-forward 사용)
+#   - namespace      : dev=onramp / tenant 테스트면 tenant1-onramp 등 (API_UPSTREAM도 함께 변경)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: onramp-web
+  namespace: onramp
+  labels: { app: onramp-web }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: onramp-web }
+  template:
+    metadata:
+      labels: { app: onramp-web }
+    spec:
+      imagePullSecrets:
+        - name: harbor-image-pull-secret
+      containers:
+        - name: onramp-web
+          image: amdp-registry.skala-ai.com/skala26a-cloud/onramp-web:<IMAGE_TAG>
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            # 프록시 대상 onramp-api (배포 ns에 맞춰 변경: tenant1면 onramp-api.tenant1-onramp.svc...)
+            - name: API_UPSTREAM
+              value: onramp-api.onramp.svc.cluster.local:8000
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 25m, memory: 32Mi }
+            limits: { cpu: 200m, memory: 128Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: onramp-web
+  namespace: onramp
+  labels: { app: onramp-web }
+spec:
+  type: ClusterIP
+  selector: { app: onramp-web }
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: onramp-web
+  namespace: onramp
+  labels: { app: onramp-web }
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: <INGRESS_HOST>
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: onramp-web
+                port:
+                  name: http
