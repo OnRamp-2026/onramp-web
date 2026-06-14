@@ -2,10 +2,11 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import type { ChatMessage, LlmModel, SourceDoc } from "@/types";
 import { INITIAL_CONVERSATION, MODELS } from "@/api/mock";
-import { sendChat } from "@/api/chat";
+import { sendChat, CHAT_MOCK_ENABLED } from "@/api/chat";
 
 export const useChatStore = defineStore("chat", () => {
-  const messages = ref<ChatMessage[]>([...INITIAL_CONVERSATION]);
+  // 실연동(mock=false)이면 빈 채팅으로 시작 — 데모 시드 대화는 mock 모드에서만
+  const messages = ref<ChatMessage[]>(CHAT_MOCK_ENABLED ? [...INITIAL_CONVERSATION] : []);
   const model = ref<LlmModel>(MODELS[0]);
   const activeSource = ref<SourceDoc | null>(null);
   const sending = ref(false);
