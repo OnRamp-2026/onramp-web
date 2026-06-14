@@ -39,6 +39,8 @@ export interface SourceDoc {
   space_key: string; // Confluence space, 예: OPS
   content_snippet: string; // 본문 일부 (추적성)
   score: number; // rerank/유사도
+  site?: string; // 출처 사이트 (apache/kubernetes/…, 백엔드 #108 버전 계보 메타)
+  product_version?: string; // 문서 버전 (v1.33/2.4/latest, 버전 무관 문서는 "")
   domain?: Domain; // 표시 보조 (백엔드 ChatResponse는 source별 domain 미제공)
 }
 
