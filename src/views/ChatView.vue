@@ -31,6 +31,13 @@ const auth = useAuthStore();
 
     <div class="flex-1 overflow-auto pt-[34px] pb-7">
       <div class="max-w-[768px] mx-auto px-[30px] flex flex-col gap-[30px]">
+        <!-- 빈 상태 (실연동 모드 진입 시) -->
+        <div v-if="!chat.messages.length && !chat.sending" class="pt-[12vh] text-center">
+          <div class="text-[40px] mb-3">💬</div>
+          <h2 class="font-geo text-[20px] font-bold text-navy">무엇을 도와드릴까요?</h2>
+          <p class="text-[14px] text-slate mt-2">운영 매뉴얼·장애 대응·API 문서를 물어보세요.</p>
+        </div>
+
         <template v-for="(m, i) in chat.messages" :key="i">
           <div v-if="m.role === 'user'" class="self-end max-w-[78%]">
             <div class="bg-navy text-[#EAF1FA] px-4 py-3 rounded-[14px_14px_4px_14px] text-[15px] leading-[1.55]">{{ m.text }}</div>

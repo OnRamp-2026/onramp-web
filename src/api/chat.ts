@@ -3,6 +3,8 @@ import { mockAnswerFor } from "@/api/mock";
 import { post } from "@/api/http";
 
 const USE_MOCK = (import.meta.env.VITE_USE_MOCK ?? "true") === "true";
+/** 챗 mock 모드 여부 — 스토어가 초기 시드 대화(INITIAL_CONVERSATION) 표시 결정에 사용 */
+export const CHAT_MOCK_ENABLED = USE_MOCK;
 
 /** 백엔드 ChatResponse 계약 (onramp-api app/models/response.py) */
 export interface ChatResponse {
