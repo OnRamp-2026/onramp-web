@@ -1,16 +1,18 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import type { AssetReport, FiveElements, UploadForm } from "@/types";
-import { MOCK_ASSETS, generateDraft, saveAsset, approveAsset } from "@/api/assets";
+import { ASSET_MOCK_ENABLED, MOCK_ASSETS, generateDraft, saveAsset, approveAsset } from "@/api/assets";
 
 export const useAssetsStore = defineStore("assets", () => {
-  const list = ref<AssetReport[]>([...MOCK_ASSETS]);
+  const list = ref<AssetReport[]>(ASSET_MOCK_ENABLED ? [...MOCK_ASSETS] : []);
   const activeId = ref<string | null>(null);
   const composing = ref(true); // 기본 진입 = 업로드 화면 (단계 1)
 
   const generating = ref(false);
   const saving = ref(false);
   const publishing = ref(false);
+  const generationStatus = ref("");
+  const generationError = ref("");
 
   const active = computed(() => list.value.find((a) => a.id === activeId.value) ?? null);
 
@@ -21,17 +23,26 @@ export const useAssetsStore = defineStore("assets", () => {
   const startNew = () => {
     composing.value = true;
     activeId.value = null;
+    generationStatus.value = "";
+    generationError.value = "";
   };
 
   /** UC-08 — 업로드 → 5요소 초안 생성 */
   async function createFromUpload(form: UploadForm) {
     if (generating.value) return;
     generating.value = true;
+    generationStatus.value = "업로드 준비 중";
+    generationError.value = "";
     try {
-      const draft = await generateDraft(form);
+      const draft = await generateDraft(form, (message) => {
+        generationStatus.value = message;
+      });
       list.value.unshift(draft);
       activeId.value = draft.id;
       composing.value = false;
+      generationStatus.value = "";
+    } catch (error) {
+      generationError.value = error instanceof Error ? error.message : "보고서 생성에 실패했습니다";
     } finally {
       generating.value = false;
     }
@@ -88,8 +99,23 @@ export const useAssetsStore = defineStore("assets", () => {
   });
 
   return {
-    list, activeId, composing, generating, saving, publishing,
-    active, completeness, currentStep,
-    select, startNew, createFromUpload, editField, setTitle, save, publish,
+    list,
+    activeId,
+    composing,
+    generating,
+    saving,
+    publishing,
+    generationStatus,
+    generationError,
+    active,
+    completeness,
+    currentStep,
+    select,
+    startNew,
+    createFromUpload,
+    editField,
+    setTitle,
+    save,
+    publish,
   };
 });

@@ -1,7 +1,9 @@
 import type { AssetReport, Domain, FiveElements, Severity, UploadForm } from "@/types";
-// import { post } from "@/api/http";
+import { DOMAIN_LABEL } from "@/types";
+import { get, patch, post } from "@/api/http";
 
 const USE_MOCK = (import.meta.env.VITE_USE_MOCK ?? "true") === "true";
+export const ASSET_MOCK_ENABLED = USE_MOCK;
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** 5요소 라벨 — AnswerCard와 동일한 순서/번호 */
@@ -96,8 +98,155 @@ export const MOCK_ASSETS: AssetReport[] = [ASSET_REVIEW, ASSET_PUBLISHED];
 
 let seq = 2043;
 
-/** POST /v1/asset — 녹취 음성 업로드 → STT 전사 → 5요소 초안 생성 (UC-08) */
-export async function generateDraft(form: UploadForm): Promise<AssetReport> {
+interface UploadInstruction {
+  method: "PUT";
+  url: string;
+  headers: Record<string, string>;
+  expires_at: string;
+}
+
+interface TranscriptionCreateResponse {
+  workflow_id: string;
+  transcription_id: string;
+  status: string;
+  upload: UploadInstruction | null;
+}
+
+interface TranscriptionStatusResponse {
+  transcription_id: string;
+  status: string;
+  progress: {
+    total_chunks: number;
+    completed_chunks: number;
+    failed_chunks: number;
+    percent: number;
+  };
+  report: {
+    status: string;
+    report_id: string | null;
+  };
+  updated_at: string;
+}
+
+export interface ReportResponse {
+  report_id: string;
+  title: string;
+  report: FiveElements;
+  category: string;
+  status: "draft" | "published";
+  confluence_url: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type GenerationProgress = (message: string) => void;
+
+const FAILED_STATUSES = new Set(["transcription_failed", "correction_failed", "report_failed", "cancelled"]);
+const POLL_INTERVAL_MS = Number(import.meta.env.VITE_STT_POLL_INTERVAL_MS ?? 2000);
+const POLL_TIMEOUT_MS = Number(import.meta.env.VITE_STT_POLL_TIMEOUT_MS ?? 30 * 60 * 1000);
+
+function idempotencyKey(): string {
+  return globalThis.crypto?.randomUUID?.() ?? `upload-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function contentType(file: File): string {
+  return file.type || "application/octet-stream";
+}
+
+export async function uploadTranscription(form: UploadForm): Promise<string> {
+  if (!form.file) throw new Error("업로드할 음성 파일이 없습니다");
+  const created = await post<TranscriptionCreateResponse>(
+    "/v1/transcriptions",
+    {
+      filename: form.file.name,
+      content_type: contentType(form.file),
+      size_bytes: form.file.size,
+      title: form.file.name.replace(/\.[^.]+$/, ""),
+      language: "ko-KR",
+      category: DOMAIN_LABEL[form.domain],
+    },
+    { "Idempotency-Key": idempotencyKey() },
+  );
+  if (!created.upload) {
+    if (created.status !== "awaiting_upload") return created.transcription_id;
+    throw new Error("업로드 URL을 발급받지 못했습니다");
+  }
+
+  const uploadResponse = await fetch(created.upload.url, {
+    method: created.upload.method,
+    headers: created.upload.headers,
+    body: form.file,
+  });
+  if (!uploadResponse.ok) {
+    throw new Error(`음성 파일 업로드 실패: ${uploadResponse.status} ${uploadResponse.statusText}`);
+  }
+  const etag = uploadResponse.headers.get("ETag");
+  if (!etag) {
+    throw new Error("오브젝트 스토리지 응답의 ETag를 읽을 수 없습니다. CORS ExposeHeaders에 ETag를 추가하세요.");
+  }
+  await post(`/v1/transcriptions/${created.transcription_id}/upload-complete`, {
+    etag,
+    size_bytes: form.file.size,
+  });
+  return created.transcription_id;
+}
+
+async function waitForReport(transcriptionId: string, onProgress?: GenerationProgress): Promise<string> {
+  const deadline = Date.now() + POLL_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const status = await get<TranscriptionStatusResponse>(`/v1/transcriptions/${transcriptionId}`);
+    if (FAILED_STATUSES.has(status.status)) {
+      throw new Error(`처리 실패: ${status.status}`);
+    }
+    if (status.report.report_id && ["draft", "published"].includes(status.report.status)) {
+      return status.report.report_id;
+    }
+    if (status.status === "report_processing" || status.status === "report_queued") {
+      onProgress?.("STT 완료 · 5요소 보고서 생성 중");
+    } else if (status.status === "correcting" || status.status === "correction_completed") {
+      onProgress?.("전사 완료 · 용어 교정 중");
+    } else {
+      onProgress?.(`STT 전사 중 · ${status.progress.percent.toFixed(0)}%`);
+    }
+    await delay(POLL_INTERVAL_MS);
+  }
+  throw new Error("보고서 생성 대기 시간이 초과되었습니다");
+}
+
+function domainFromCategory(category: string, fallback: Domain): Domain {
+  const matched = (Object.keys(DOMAIN_LABEL) as Domain[]).find((domain) => DOMAIN_LABEL[domain] === category);
+  return matched ?? fallback;
+}
+
+export function mapReportResponse(raw: ReportResponse, form: UploadForm): AssetReport {
+  return {
+    id: raw.report_id,
+    title: raw.title,
+    domain: domainFromCategory(raw.category, form.domain),
+    space: "OPS",
+    status: raw.status,
+    createdAt: new Date(raw.created_at).toLocaleString(),
+    drafter: "AI 초안",
+    meta: {
+      incidentId: form.incidentId,
+      author: form.author,
+      occurredAt: form.occurredAt,
+      severity: form.severity,
+    },
+    source: {
+      kind: "transcript",
+      title: form.fileName,
+      meta: `${(form.fileSize / 1024 / 1024).toFixed(1)} MB · 녹취 음성 · STT 완료`,
+      excerpt: "교정된 STT 전사문을 기반으로 생성된 보고서입니다.",
+    },
+    edited: {},
+    five: raw.report,
+    confluenceUrl: raw.confluence_url || undefined,
+  };
+}
+
+/** POST /v1/transcriptions → presigned PUT → 보고서 초안 조회 (UC-08) */
+export async function generateDraft(form: UploadForm, onProgress?: GenerationProgress): Promise<AssetReport> {
   if (USE_MOCK) {
     await delay(1400);
     const head = form.fileName.replace(/\.[^.]+$/, "");
@@ -119,7 +268,8 @@ export async function generateDraft(form: UploadForm): Promise<AssetReport> {
         kind: "transcript",
         title: form.fileName,
         meta: `${(form.fileSize / 1024 / 1024).toFixed(1)} MB · 녹취 음성 · STT 전사`,
-        excerpt: "(음성 STT 전사 결과가 여기에 표시됩니다 — mock. 실연동 시 onramp-stt-api 전사 원문 일부가 들어갑니다.)",
+        excerpt:
+          "(음성 STT 전사 결과가 여기에 표시됩니다 — mock. 실연동 시 onramp-stt-api 전사 원문 일부가 들어갑니다.)",
       },
       edited: {},
       five: {
@@ -131,29 +281,37 @@ export async function generateDraft(form: UploadForm): Promise<AssetReport> {
       },
     };
   }
-  // 실연동: 음성 파일 multipart 업로드 → onramp-api가 오브젝트 스토리지 저장 + onramp-stt-api 전사(Redis 비동기)
-  // const fd = new FormData();
-  // fd.append("file", form.file!);                      // 녹취 음성
-  // fd.append("category", DOMAIN_LABEL[form.domain]);   // 백엔드 AssetRequest.category는 한글
-  // fd.append("incident_id", form.incidentId);
-  // fd.append("author", form.author);
-  // fd.append("occurred_at", form.occurredAt);
-  // fd.append("severity", form.severity);
-  // return mapAsset(await post("/v1/asset", fd));
-  throw new Error("백엔드 미연동 — VITE_USE_MOCK=true 로 두세요");
+  onProgress?.("업로드 URL 발급 중");
+  const transcriptionId = await uploadTranscription(form);
+  onProgress?.("업로드 완료 · STT 작업 대기 중");
+  const reportId = await waitForReport(transcriptionId, onProgress);
+  const report = await get<ReportResponse>(`/v1/reports/${reportId}`);
+  return mapReportResponse(report, form);
 }
 
-/** PATCH /v1/asset/{id} — HITL 부분 수정 (published면 409) */
+/** PATCH /v1/reports/{id} — HITL 부분 수정 (published면 409) */
 export async function saveAsset(asset: AssetReport): Promise<AssetReport> {
   if (USE_MOCK) {
     await delay(400);
     if (asset.status === "published") throw new Error("409: 등록된 자산은 수정할 수 없습니다");
     return { ...asset, status: asset.status === "draft" ? "review" : asset.status };
   }
-  throw new Error("백엔드 미연동");
+  const raw = await patch<ReportResponse>(`/v1/reports/${asset.id}`, {
+    title: asset.title,
+    category: DOMAIN_LABEL[asset.domain],
+    ...asset.five,
+  });
+  return {
+    ...asset,
+    title: raw.title,
+    domain: domainFromCategory(raw.category, asset.domain),
+    status: raw.status,
+    five: raw.report,
+    confluenceUrl: raw.confluence_url || undefined,
+  };
 }
 
-/** POST /v1/asset/{id}/approve — Confluence 등록 (UC-09) */
+/** POST /v1/reports/{id}/approve — Confluence 등록 (UC-09) */
 export async function approveAsset(asset: AssetReport): Promise<AssetReport> {
   if (USE_MOCK) {
     await delay(1100);
@@ -163,5 +321,12 @@ export async function approveAsset(asset: AssetReport): Promise<AssetReport> {
       confluenceUrl: `https://confluence.internal/display/${asset.space}/${asset.id}`,
     };
   }
-  throw new Error("백엔드 미연동");
+  const approved = await post<{ report_id: string; status: "published"; confluence_url: string }>(
+    `/v1/reports/${asset.id}/approve`,
+  );
+  return {
+    ...asset,
+    status: approved.status,
+    confluenceUrl: approved.confluence_url,
+  };
 }

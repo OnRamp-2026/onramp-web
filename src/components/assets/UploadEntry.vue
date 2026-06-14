@@ -111,9 +111,18 @@ const fieldCls =
             @dragleave.prevent="dragging = false"
             @drop.prevent="onDrop"
           >
-            <input ref="fileInput" type="file" accept="audio/*,.wav,.mp3,.m4a,.webm,.flac,.ogg,.aac" class="hidden" @change="handleFiles(($event.target as HTMLInputElement).files)" />
+            <input
+              ref="fileInput"
+              type="file"
+              accept="audio/*,.wav,.mp3,.m4a,.webm,.flac,.ogg,.aac"
+              class="hidden"
+              @change="handleFiles(($event.target as HTMLInputElement).files)"
+            />
 
-            <div class="w-14 h-14 mx-auto mb-4 rounded-2xl grid place-items-center text-2xl transition" :class="hasFile ? 'bg-teal/15' : 'bg-navy/[0.05]'">
+            <div
+              class="w-14 h-14 mx-auto mb-4 rounded-2xl grid place-items-center text-2xl transition"
+              :class="hasFile ? 'bg-teal/15' : 'bg-navy/[0.05]'"
+            >
               {{ hasFile ? "🎙" : "🗂" }}
             </div>
             <div class="font-geo text-[16px] font-semibold text-navy">
@@ -143,7 +152,9 @@ const fieldCls =
             <span class="text-base">📎</span>
             <div class="flex-1 min-w-0">
               <div class="text-[13px] font-medium text-ink truncate">{{ fileName }}</div>
-              <div class="font-mono text-[10.5px] text-faint">{{ (fileSize / 1024 / 1024).toFixed(1) }} MB · 녹취 음성</div>
+              <div class="font-mono text-[10.5px] text-faint">
+                {{ (fileSize / 1024 / 1024).toFixed(1) }} MB · 녹취 음성
+              </div>
             </div>
             <span class="font-mono text-[11px] text-[#0f9c84] flex items-center gap-1 shrink-0">✓ 검증 OK</span>
             <button class="text-faint hover:text-ink text-lg leading-none shrink-0" @click="clearFile">×</button>
@@ -160,11 +171,15 @@ const fieldCls =
 
           <div class="flex flex-col gap-3.5">
             <div>
-              <label class="block text-[12px] font-medium text-slate mb-1.5">장애 ID <span class="text-blue">*</span></label>
+              <label class="block text-[12px] font-medium text-slate mb-1.5"
+                >장애 ID <span class="text-blue">*</span></label
+              >
               <input v-model="incidentId" :class="fieldCls" placeholder="INC-2026-0521-EKS" />
             </div>
             <div>
-              <label class="block text-[12px] font-medium text-slate mb-1.5">작성자 <span class="text-blue">*</span></label>
+              <label class="block text-[12px] font-medium text-slate mb-1.5"
+                >작성자 <span class="text-blue">*</span></label
+              >
               <input v-model="author" :class="fieldCls" placeholder="김인프라" />
             </div>
             <div>
@@ -173,7 +188,9 @@ const fieldCls =
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-[12px] font-medium text-slate mb-1.5">도메인 <span class="text-blue">*</span></label>
+                <label class="block text-[12px] font-medium text-slate mb-1.5"
+                  >도메인 <span class="text-blue">*</span></label
+                >
                 <select v-model="domain" :class="fieldCls">
                   <option v-for="d in DOMAINS" :key="d" :value="d">{{ DOMAIN_LABEL[d] }}</option>
                 </select>
@@ -204,9 +221,18 @@ const fieldCls =
         :disabled="!canSubmit"
         @click="submit"
       >
-        <span v-if="store.generating" class="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin"></span>
+        <span
+          v-if="store.generating"
+          class="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin"
+        ></span>
         {{ store.generating ? "STT 전사 → 5요소 보고서 생성 중…" : "🚀 업로드 + 5요소 보고서 자동 생성" }}
       </button>
+      <p v-if="store.generating && store.generationStatus" class="text-center text-[12.5px] text-blue mt-3">
+        {{ store.generationStatus }}
+      </p>
+      <p v-if="store.generationError" class="text-center text-[12.5px] text-[#d4495f] mt-3">
+        {{ store.generationError }}
+      </p>
       <p class="text-center text-[12px] text-faint mt-3">
         💡 녹취 길이에 따라 STT 전사에 수 분이 걸릴 수 있습니다. 초안 준비 후 HITL 검토를 거쳐 Confluence에 등록됩니다.
       </p>
