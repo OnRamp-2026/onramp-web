@@ -3,8 +3,9 @@
 #
 # 적용 전 치환할 것:
 #   - <IMAGE_TAG>  : 빌드/푸시한 이미지 태그 (예: git short sha)
-#   - <INGRESS_HOST> : 외부 접근 호스트 (DNS 없으면 ingress LB주소 기반 nip.io 또는 port-forward 사용)
 #   - namespace      : dev=onramp / tenant 테스트면 tenant1-onramp 등 (API_UPSTREAM도 함께 변경)
+# Ingress는 host 미지정(catch-all) — ingress-nginx LB(ELB) 주소로 바로 접속.
+#   같은 LB의 jenkins 웹훅(/github-webhook/)은 더 긴 path prefix라 보존됨(루트 / 는 onramp-web).
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -70,8 +71,8 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: <INGRESS_HOST>
-      http:
+    # host 미지정 = catch-all. ingress-nginx LB(ELB) 주소로 접속, jenkins 웹훅(/github-webhook/) 보존.
+    - http:
         paths:
           - path: /
             pathType: Prefix
