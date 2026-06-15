@@ -14,11 +14,35 @@ export function loginRedirect(provider: AuthProvider) {
   window.location.href = `${BASE}/auth/login?provider=${provider}&redirect=${ret}`;
 }
 
+/** 백엔드 /auth/me 응답(평면) — onramp-api MeResponse 계약. */
+interface MeResponse {
+  tenant_id?: string;
+  subject?: string;
+  name?: string | null;
+  email?: string | null;
+  provider?: AuthProvider | null;
+}
+
+/** 백엔드 응답 → 프론트 AuthUser. 백엔드는 tenant_id(문자열)만 주므로 표시 필드는 여기서 파생. */
+function toAuthUser(me: MeResponse): AuthUser {
+  const display = me.name || me.email || "사용자";
+  const tenantId = me.tenant_id ?? "";
+  return {
+    id: me.subject ?? "",
+    name: display,
+    email: me.email ?? "",
+    initial: display.slice(0, 1),
+    tenant: { id: tenantId, label: tenantId || "회사" },
+    tenure: "",
+    provider: me.provider ?? "slack",
+  };
+}
+
 /** 실 OIDC: 백엔드 세션 쿠키 기준 현재 사용자 복원(callback 복귀·새로고침 시). */
 export async function fetchSession(): Promise<AuthUser | null> {
   try {
     const res = await fetch(`${BASE}/auth/me`, { credentials: "include" });
-    return res.ok ? ((await res.json()) as AuthUser) : null;
+    return res.ok ? toAuthUser((await res.json()) as MeResponse) : null;
   } catch {
     return null;
   }
