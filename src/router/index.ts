@@ -4,8 +4,8 @@ import ChatView from "@/views/ChatView.vue";
 /** 전 메뉴 전원 접근 — 인가는 테넌트(회사) + Confluence 권한으로, 별도 역할 게이트 없음(6/11). */
 export const NAV: { path: string; icon: string; label: string }[] = [
   { path: "/chat", icon: "💬", label: "챗봇" },
-  { path: "/galaxy", icon: "🌌", label: "프로젝트 맵" },
-  { path: "/graph", icon: "🕸️", label: "지식맵" },
+  // 지식맵 = 진입은 프로젝트맵(/galaxy), OnRamp 노드 클릭 시 문서 지식맵(/graph)으로 드릴인
+  { path: "/galaxy", icon: "🕸️", label: "지식맵" },
   { path: "/guide", icon: "🧭", label: "학습 가이드" },
   { path: "/assets", icon: "⭐", label: "자산화" },
   { path: "/settings", icon: "⚙️", label: "설정" },

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { SPH_NODES, SPH_EDGES, SOURCE_META, SOURCE_ORDER } from "@/api/graphReal";
 import { createSphereGraph, type SInNode } from "@/composables/useSphereGraph";
 
+const router = useRouter();
 type Kind = "root" | "source" | "folder" | "page";
 const colorOfSrc = (s: string) => (SOURCE_META[s] ?? SOURCE_META["기타"]).color;
 
@@ -110,6 +111,12 @@ onBeforeUnmount(() => engine?.destroy());
 <template>
   <main class="flex flex-col h-screen flex-1 overflow-hidden">
     <header class="flex items-center gap-3.5 px-[30px] py-3.5 border-b border-line bg-white/80 backdrop-blur z-10">
+      <button
+        class="flex items-center gap-1.5 text-[12px] font-medium text-slate hover:text-navy px-2 py-1 -ml-2 rounded-md hover:bg-navy/[0.05] transition"
+        @click="router.push('/galaxy')"
+      >
+        ← 프로젝트 맵
+      </button>
       <span class="font-geo text-base font-semibold text-navy">지식맵</span>
       <span class="font-mono text-[11px] text-faint">/ Knowledge Sphere</span>
       <div class="ml-3 flex items-center p-0.5 rounded-lg bg-navy/[0.06] text-[11px] font-medium">
