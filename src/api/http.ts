@@ -6,7 +6,11 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   if (DEV_AUTH_TOKEN && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${DEV_AUTH_TOKEN}`);
   }
-  const res = await fetch(`${BASE}${path}`, { ...init, headers });
+  const res = await fetch(`${BASE}${path}`, {
+    ...init,
+    headers,
+    credentials: "include",
+  });
   if (!res.ok) {
     let detail = `${res.status} ${res.statusText}`;
     try {

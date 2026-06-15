@@ -86,6 +86,8 @@ spec:
               --context "${WORKSPACE}" \
               --dockerfile "${WORKSPACE}/Dockerfile" \
               --custom-platform=linux/amd64 \
+              --build-arg VITE_AUTH_MOCK=false \
+              --build-arg VITE_DEV_AUTH_TOKEN= \
               --destination "${IMAGE_REPOSITORY}:${IMAGE_TAG}" \
               --no-push
           '''
@@ -120,6 +122,8 @@ EOF
                 --context "${WORKSPACE}" \
                 --dockerfile "${WORKSPACE}/Dockerfile" \
                 --custom-platform=linux/amd64 \
+                --build-arg VITE_AUTH_MOCK=false \
+                --build-arg VITE_DEV_AUTH_TOKEN= \
                 --destination "${IMAGE_REPOSITORY}:${IMAGE_TAG}" \
                 --digest-file "${WORKSPACE}/image-digest.txt"
             '''

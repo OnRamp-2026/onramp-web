@@ -10,11 +10,11 @@ COPY . .
 # Vite 환경값은 빌드 타임에 번들에 박힌다.
 #  - VITE_USE_MOCK=false : 실 백엔드(/v1/chat·/v1/transcriptions) 연동
 #  - VITE_API_BASE_URL=  : 빈값=상대경로 → 같은 호스트(nginx)가 /v1·/auth 프록시(same-origin)
-#  - VITE_AUTH_MOCK=true : OIDC(#98) 전까지 로그인 mock
+#  - VITE_AUTH_MOCK=false: 백엔드 OIDC RP(/auth/*) 사용
 #  - VITE_DEV_AUTH_TOKEN : STT(/v1/transcriptions) Bearer용 dev JWT (선택, 비우면 STT 인증 실패)
 ARG VITE_USE_MOCK=false
 ARG VITE_API_BASE_URL=
-ARG VITE_AUTH_MOCK=true
+ARG VITE_AUTH_MOCK=false
 ARG VITE_DEV_AUTH_TOKEN=
 ENV VITE_USE_MOCK=$VITE_USE_MOCK \
     VITE_API_BASE_URL=$VITE_API_BASE_URL \
