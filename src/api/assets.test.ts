@@ -49,8 +49,11 @@ describe("STT asset API", () => {
 
     expect(transcriptionId).toBe("transcription-1");
     expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ credentials: "include" });
     expect(fetchMock.mock.calls[1]?.[0]).toBe("https://storage.test/source");
+    expect(fetchMock.mock.calls[1]?.[1]).not.toHaveProperty("credentials");
     expect(fetchMock.mock.calls[2]?.[0]).toContain("/v1/transcriptions/transcription-1/upload-complete");
+    expect(fetchMock.mock.calls[2]?.[1]).toMatchObject({ credentials: "include" });
   });
 
   it("maps database report response to the editor model", () => {

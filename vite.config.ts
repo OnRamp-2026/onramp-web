@@ -12,6 +12,7 @@ export default defineConfig({
     // 백엔드(onramp-api) 프록시 — 개발 중 CORS 회피
     proxy: {
       "/v1": { target: "http://localhost:8000", changeOrigin: true },
+      "/auth": { target: "http://localhost:8000", changeOrigin: true },
     },
   },
 });
