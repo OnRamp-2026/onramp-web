@@ -14,6 +14,13 @@ export interface ChatResponse {
   answerability_reason: string;
   domain: Domain; // 영문 classifier 키
   model_used: string;
+  conversation_id?: string; // 로그인 시 저장된 대화 ID (익명이면 "")
+}
+
+/** sendChat 결과 — 답변 메시지 + 저장된 대화 ID(이어가기/목록 동기화용) */
+export interface ChatResult {
+  message: AssistantMessage;
+  conversationId: string;
 }
 
 /** 백엔드 ChatResponse → 화면 메시지. 영문 domain은 그대로 보관(표시는 DOMAIN_LABEL). */
@@ -30,16 +37,17 @@ export function mapToAssistantMessage(raw: ChatResponse): AssistantMessage {
 }
 
 /**
- * 질문을 백엔드(/v1/chat, LangGraph)로 보내 5요소 답변을 받는다.
- * 백엔드 미연동 단계에서는 mock 답변을 반환한다.
+ * 질문을 백엔드(/v1/chat, LangGraph)로 보내 5요소 답변 + 저장된 대화 ID를 받는다.
+ * 백엔드 미연동 단계에서는 mock 답변을 반환한다(대화 ID 없음).
+ * conversationId가 있으면 그 대화를 이어가고, 없으면 새 대화로 저장된다(로그인 시).
  */
-export async function sendChat(query: string, model: string): Promise<AssistantMessage> {
+export async function sendChat(query: string, model: string, conversationId = ""): Promise<ChatResult> {
   if (USE_MOCK) {
     await new Promise((r) => setTimeout(r, 450));
-    return mockAnswerFor(query);
+    return { message: mockAnswerFor(query), conversationId: "" };
   }
-  // 백엔드 ChatRequest = {query, model}. model은 LLM Selector가 prefix로 provider 라우팅
-  // (gpt-*→openai / 그 외 비공백→self_hosted). 빈 model이면 백엔드 config 기본값.
-  const raw = await post<ChatResponse>("/v1/chat", { query, model });
-  return mapToAssistantMessage(raw);
+  // 백엔드 ChatRequest = {query, model, conversation_id}. model은 LLM Selector가 prefix로
+  // provider 라우팅(gpt-*→openai / 그 외 비공백→self_hosted). 빈 model이면 백엔드 config 기본값.
+  const raw = await post<ChatResponse>("/v1/chat", { query, model, conversation_id: conversationId });
+  return { message: mapToAssistantMessage(raw), conversationId: raw.conversation_id ?? "" };
 }
