@@ -57,9 +57,9 @@ export async function logoutSession(): Promise<void> {
   }
 }
 
-export const PROVIDERS: { id: AuthProvider; label: string; sub: string; icon: string }[] = [
-  // 회사 SSO(Keycloak/Entra)는 실연동 전까지 잠금 — 현재 실 IdP는 Slack뿐.
-  // SSO 실연동 시 아래 항목 복원: { id: "sso", label: "회사 SSO로 로그인", sub: "OIDC · Keycloak / Entra ID", icon: "🔐" },
+export const PROVIDERS: { id: AuthProvider; label: string; sub: string; icon: string; locked?: boolean }[] = [
+  // 회사 SSO(Keycloak/Entra)는 실연동 전까지 비활성('준비중') — 버튼은 노출하되 클릭 불가. 실연동 시 locked 제거.
+  { id: "sso", label: "회사 SSO로 로그인", sub: "준비 중 · 곧 지원 예정", icon: "🔐", locked: true },
   { id: "slack", label: "Slack으로 로그인", sub: "Slack 계정 · 이중 로그인 없음", icon: "💬" },
 ];
 
