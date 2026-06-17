@@ -6,6 +6,9 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # TLS는 ingress에서 종단된다($scheme=http). 절대 리다이렉트는 스킴 다운그레이드(mixed content)를 유발하므로 끈다.
+    absolute_redirect off;
+
     # k8s probe
     location = /healthz {
         access_log off;
@@ -40,9 +43,11 @@ server {
     }
 
     # SPA — 정적 파일 우선, 없으면 index.html (클라이언트 라우팅)
+    # $uri/(디렉터리 폴백) 제외: SPA 라우트 /assets 가 정적 디렉터리 /assets/ 와 충돌해
+    # 트레일링 슬래시 301 리다이렉트를 유발했다(스킴 다운그레이드 → mixed content).
     # index.html은 항상 재검증해야 새 번들 해시를 픽업한다(stale 화면 방지).
     location / {
-        try_files $uri $uri/ /index.html;
+        try_files $uri /index.html;
         add_header Cache-Control "no-cache";
     }
 }
