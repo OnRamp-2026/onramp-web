@@ -4,6 +4,7 @@ import type { ChatMessage, LlmModel, SourceDoc } from "@/types";
 import { INITIAL_CONVERSATION, MODELS } from "@/api/mock";
 import { sendChat, CHAT_MOCK_ENABLED } from "@/api/chat";
 import {
+  deleteConversation as apiDeleteConversation,
   getConversationMessages,
   listConversations,
   toChatMessage,
@@ -71,6 +72,17 @@ export const useChatStore = defineStore("chat", () => {
     error.value = null;
   }
 
+  async function deleteConversation(id: string) {
+    if (!id) return;
+    try {
+      await apiDeleteConversation(id);
+      conversations.value = conversations.value.filter((c) => c.conversation_id !== id);
+      if (id === activeId.value) newConversation(); // 보던 대화면 빈 화면으로
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : "대화를 삭제하지 못했습니다.";
+    }
+  }
+
   const clearError = () => (error.value = null);
   const setModel = (m: LlmModel) => (model.value = m);
   const openSource = (s: SourceDoc) => (activeSource.value = s);
@@ -88,6 +100,7 @@ export const useChatStore = defineStore("chat", () => {
     loadConversations,
     selectConversation,
     newConversation,
+    deleteConversation,
     setModel,
     openSource,
     closeSource,

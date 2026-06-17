@@ -46,3 +46,7 @@ export function post<T>(path: string, body?: unknown, headers?: HeadersInit): Pr
 export function patch<T>(path: string, body: unknown): Promise<T> {
   return request<T>(path, jsonInit("PATCH", body));
 }
+
+export function del(path: string): Promise<void> {
+  return request<void>(path, { method: "DELETE" });
+}

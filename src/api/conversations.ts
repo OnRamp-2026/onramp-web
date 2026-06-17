@@ -1,5 +1,5 @@
 import type { AssistantMessage, ChatMessage, Domain, FiveElements, SourceDoc } from "@/types";
-import { get } from "@/api/http";
+import { del, get } from "@/api/http";
 
 /** GET /v1/conversations 항목 (onramp-api ConversationSummary) */
 export interface ConversationSummary {
@@ -27,6 +27,10 @@ export function listConversations(): Promise<ConversationSummary[]> {
 
 export function getConversationMessages(id: string): Promise<ConversationMessageDto[]> {
   return get<ConversationMessageDto[]>(`/v1/conversations/${id}/messages`);
+}
+
+export function deleteConversation(id: string): Promise<void> {
+  return del(`/v1/conversations/${id}`);
 }
 
 function hhmm(iso: string): string {
