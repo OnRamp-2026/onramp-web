@@ -14,8 +14,10 @@ const provider = ref<AuthProvider | null>(null);
 const chosen = computed(() => PROVIDERS.find((p) => p.id === provider.value));
 const accounts = computed(() => DEMO_ACCOUNTS); // 실연동 시 IdP가 단일 신원 반환
 
-/** mock: 계정 선택 화면으로 / 실 OIDC: 백엔드 RP로 redirect(Keycloak 위임) */
+/** mock: 계정 선택 화면으로 / 실 OIDC: 백엔드 RP로 redirect(Keycloak 위임). locked provider는 무시('준비중'). */
 function onProvider(provId: AuthProvider) {
+  const p = PROVIDERS.find((x) => x.id === provId);
+  if (p?.locked) return;
   if (AUTH_MOCK) provider.value = provId;
   else loginRedirect(provId);
 }
@@ -106,15 +108,21 @@ const EDGES: { x1: number; y1: number; x2: number; y2: number; sig: boolean }[] 
             v-for="(p, i) in PROVIDERS"
             :key="p.id"
             class="lr-prov lr-rise"
+            :class="{ 'lr-prov--locked': p.locked }"
             :style="{ animationDelay: 0.18 + i * 0.07 + 's' }"
+            :disabled="p.locked"
+            :aria-disabled="p.locked"
             @click="onProvider(p.id)"
           >
             <span class="lr-prov-ic">{{ p.icon }}</span>
             <span class="lr-prov-txt">
-              <span class="lr-prov-label">{{ p.label }}</span>
+              <span class="lr-prov-label">
+                {{ p.label }}
+                <span v-if="p.locked" class="lr-prov-soon">준비중</span>
+              </span>
               <span class="lr-prov-sub">{{ p.sub }}</span>
             </span>
-            <span class="lr-prov-go">→</span>
+            <span class="lr-prov-go">{{ p.locked ? "🔒" : "→" }}</span>
           </button>
         </template>
 
@@ -360,6 +368,30 @@ const EDGES: { x1: number; y1: number; x2: number; y2: number; sig: boolean }[] 
   background: linear-gradient(180deg, #fff, #f7fdfb);
   box-shadow: 0 14px 30px -18px rgba(31, 199, 172, 0.65);
 }
+/* 잠금(준비중) provider — 노출하되 비활성 */
+.lr-prov--locked {
+  cursor: not-allowed;
+  opacity: 0.55;
+  background: #f6f8fb;
+}
+.lr-prov--locked:hover {
+  transform: none;
+  border-color: #d4deea;
+  background: #f6f8fb;
+  box-shadow: none;
+}
+.lr-prov-soon {
+  margin-left: 7px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(22, 33, 62, 0.08);
+  color: #566579;
+  vertical-align: middle;
+}
+
 .lr-prov-ic {
   width: 40px;
   height: 40px;
