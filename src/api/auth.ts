@@ -58,7 +58,8 @@ export async function logoutSession(): Promise<void> {
 }
 
 export const PROVIDERS: { id: AuthProvider; label: string; sub: string; icon: string }[] = [
-  { id: "sso", label: "회사 SSO로 로그인", sub: "OIDC · Keycloak / Entra ID", icon: "🔐" },
+  // 회사 SSO(Keycloak/Entra)는 실연동 전까지 잠금 — 현재 실 IdP는 Slack뿐.
+  // SSO 실연동 시 아래 항목 복원: { id: "sso", label: "회사 SSO로 로그인", sub: "OIDC · Keycloak / Entra ID", icon: "🔐" },
   { id: "slack", label: "Slack으로 로그인", sub: "Slack 계정 · 이중 로그인 없음", icon: "💬" },
 ];
 
