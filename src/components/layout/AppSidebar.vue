@@ -44,6 +44,11 @@ async function startNew() {
   if (router.currentRoute.value.name !== "chat") await router.push("/chat");
 }
 
+async function removeConversation(item: RecentItem) {
+  if (!item.id) return; // mock 항목은 삭제 없음
+  await chat.deleteConversation(item.id);
+}
+
 onMounted(() => {
   if (auth.isAuthenticated) void chat.loadConversations();
 });
@@ -89,11 +94,21 @@ watch(
       <div
         v-for="(h, i) in recent"
         :key="h.id || i"
-        class="px-2.5 py-2 rounded-lg cursor-pointer text-[13px] truncate"
+        class="group flex items-center gap-1 px-2.5 py-2 rounded-lg cursor-pointer text-[13px]"
         :class="h.active ? 'bg-navy/[0.06] text-ink font-medium' : 'text-slate hover:bg-navy/5 hover:text-ink'"
         @click="openConversation(h)"
       >
-        <span v-if="h.domain" class="font-mono text-[10px] text-teal mr-1.5">[{{ h.domain }}]</span>{{ h.title }}
+        <span class="truncate flex-1">
+          <span v-if="h.domain" class="font-mono text-[10px] text-teal mr-1.5">[{{ h.domain }}]</span>{{ h.title }}
+        </span>
+        <button
+          v-if="h.id"
+          class="shrink-0 opacity-0 group-hover:opacity-100 text-faint hover:text-[#b3344a] text-[12px] leading-none px-1 transition"
+          title="대화 삭제"
+          @click.stop="removeConversation(h)"
+        >
+          ✕
+        </button>
       </div>
       <div v-if="!recent.length" class="px-2.5 py-2 text-[12px] text-faint">아직 대화가 없습니다.</div>
     </div>

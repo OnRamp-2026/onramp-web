@@ -6,8 +6,17 @@ const chat = useChatStore();
 const draft = ref("");
 
 function submit() {
+  if (chat.sending || !draft.value.trim()) return;
   chat.send(draft.value);
   draft.value = "";
+}
+
+// 한글 IME 조합 중 엔터는 마지막 음절이 commit되기 전이라 전송 시 끝 글자가 잘림 → 조합 중엔 무시.
+function onEnter(e: KeyboardEvent) {
+  if (e.isComposing || e.keyCode === 229) return; // IME 조합 중
+  if (e.shiftKey) return; // Shift+Enter = 줄바꿈 허용
+  e.preventDefault();
+  submit();
 }
 </script>
 
@@ -21,7 +30,7 @@ function submit() {
         rows="1"
         placeholder="사내 지식에 무엇이든 물어보세요  —  예: '어제 결제 장애 정리해줘'"
         class="border-none outline-none resize-none text-[15px] leading-[1.5] bg-transparent pt-2 pb-0.5 w-full max-h-[120px] placeholder:text-faint"
-        @keydown.enter.exact.prevent="submit"
+        @keydown.enter="onEnter"
       ></textarea>
       <div class="flex items-center gap-2.5">
         <span
