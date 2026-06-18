@@ -36,7 +36,7 @@ spec:
   environment {
     IMAGE_REPOSITORY = 'amdp-registry.skala-ai.com/skala26a-cloud/onramp-web'
     GITOPS_REPOSITORY = 'https://github.com/OnRamp-2026/gitops.git'
-    GITOPS_VALUES_FILES = 'apps/onramp-web/values-dev.yaml apps/onramp-web/values-tenant1.yaml'
+    GITOPS_VALUES_FILES = 'apps/onramp-web/values-dev.yaml apps/onramp-web/values-tenant1.yaml apps/onramp-web/values-tenant2.yaml'
   }
 
   stages {
@@ -178,17 +178,51 @@ const replacements = {
 };
 
 for (const path of paths) {
-  const updatedLines = fs.readFileSync(path, 'utf8').split('\\n').map((line) => {
-    const stripped = line.replace(/^ +/, '');
-    const indent = line.slice(0, line.length - stripped.length);
+  const lines = fs.readFileSync(path, 'utf8').split('\\n');
+  const updatedLines = [];
+  const sectionStack = [];
+  const updatedKeys = new Set();
 
-    for (const [key, value] of Object.entries(replacements)) {
-      if (stripped.startsWith(key)) {
-        return `${indent}${key} ${value}`;
+  for (const line of lines) {
+    const stripped = line.replace(/^ +/, '');
+    const indentWidth = line.length - stripped.length;
+
+    if (stripped && !stripped.startsWith('#')) {
+      while (sectionStack.length && indentWidth <= sectionStack[sectionStack.length - 1].indentWidth) {
+        sectionStack.pop();
+      }
+
+      if (stripped.endsWith(':')) {
+        sectionStack.push({
+          key: stripped.slice(0, -1).trim(),
+          indentWidth,
+        });
       }
     }
-    return line;
-  });
+
+    const currentPath = sectionStack.slice(-2).map((section) => section.key).join('.');
+    if (currentPath === 'app.image') {
+      let replaced = false;
+      for (const [key, value] of Object.entries(replacements)) {
+        if (stripped.startsWith(key)) {
+          updatedLines.push(`${' '.repeat(indentWidth)}${key} ${value}`);
+          updatedKeys.add(key);
+          replaced = true;
+          break;
+        }
+      }
+      if (!replaced) {
+        updatedLines.push(line);
+      }
+    } else {
+      updatedLines.push(line);
+    }
+  }
+
+  const missingKeys = Object.keys(replacements).filter((key) => !updatedKeys.has(key));
+  if (missingKeys.length > 0) {
+    throw new Error(`${path}: app.image block update failed (${missingKeys.join(', ')})`);
+  }
 
   fs.writeFileSync(path, updatedLines.join('\\n'));
 }
