@@ -170,7 +170,7 @@ EOF
             node - <<'JS'
 const fs = require('fs');
 
-const paths = process.env.GITOPS_VALUES_FILES.split(/\s+/).filter(Boolean);
+const paths = process.env.GITOPS_VALUES_FILES.split(/\\s+/).filter(Boolean);
 const replacements = {
   'repository:': process.env.IMAGE_REPOSITORY,
   'tag:': process.env.IMAGE_TAG,
