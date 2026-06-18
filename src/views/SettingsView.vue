@@ -48,7 +48,7 @@ async function refresh() {
     const [current, runs] = await Promise.all([getCurrentIngestionRun(), listIngestionRuns()]);
     active.value = current;
     history.value = runs;
-  } catch (error) {
+  } catch {
     message.value = "수집 상태를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
   } finally {
     loading.value = false;
