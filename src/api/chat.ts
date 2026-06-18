@@ -8,7 +8,9 @@ export const CHAT_MOCK_ENABLED = USE_MOCK;
 
 /** 백엔드 ChatResponse 계약 (onramp-api app/models/response.py) */
 export interface ChatResponse {
+  answer_format?: "structured" | "freeform"; // #191 — 렌더 분기 (없으면 structured 가정)
   answer: FiveElements; // {situation, cause, evidence, solution, infra_context}
+  answer_text?: string; // freeform 산문 답변
   sources: SourceDoc[]; // {title, url, space_key, content_snippet, score}
   answerability_status: AssistantMessage["answerability_status"];
   answerability_reason: string;
@@ -30,6 +32,8 @@ export function mapToAssistantMessage(raw: ChatResponse): AssistantMessage {
     domain: raw.domain,
     answerability_status: raw.answerability_status,
     answerability_reason: raw.answerability_reason ?? "",
+    answer_format: raw.answer_format ?? "structured",
+    answer_text: raw.answer_text ?? "",
     five: raw.answer,
     sources: raw.sources ?? [],
     model_used: raw.model_used,

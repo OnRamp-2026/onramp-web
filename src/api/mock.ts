@@ -63,6 +63,8 @@ const ANSWERABLE: AssistantMessage = {
   domain: "incident",
   answerability_status: "answerable",
   answerability_reason: "",
+  answer_format: "structured",
+  answer_text: "",
   five: FIVE_EKS,
   sources: [SRC_RUNBOOK, SRC_RESOURCE, SRC_PROBE],
   model_used: "gpt-4o-mini",
@@ -84,6 +86,8 @@ const NOT_ENOUGH: AssistantMessage = {
   answerability_status: "not_enough_evidence",
   answerability_reason:
     "질문에 해당하는 운영 문서를 충분히 찾지 못했습니다. 검색어를 구체화하거나 도메인(장애대응·운영매뉴얼 등)을 좁혀 다시 질문해 주세요.",
+  answer_format: "structured",
+  answer_text: "",
   five: EMPTY_FIVE,
   sources: [],
   model_used: "gpt-4o-mini",
@@ -96,6 +100,8 @@ const CONFLICTING: AssistantMessage = {
   answerability_status: "conflicting_evidence",
   answerability_reason:
     "동등한 권위의 문서가 서로 다른 롤백 절차를 안내합니다(ArgoCD v2.8 / v2.10). 적용 대상 버전을 확인한 뒤 다시 질문해 주세요.",
+  answer_format: "structured",
+  answer_text: "",
   five: EMPTY_FIVE,
   sources: [
     { ...SRC_RUNBOOK, title: "ArgoCD 롤백 절차 (v2.8)", url: "https://confluence.local/display/OPS/ArgoCD-Rollback-28", score: 0.84, domain: "manual" },
