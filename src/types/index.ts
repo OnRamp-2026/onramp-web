@@ -62,6 +62,7 @@ export interface AssistantMessage {
   five: FiveElements;
   sources: SourceDoc[];
   model_used?: string;
+  trace_id?: string; // Langfuse trace — 👍/👎 피드백(/v1/chat/feedback) 참조용
 }
 
 export type ChatMessage = UserMessage | AssistantMessage;

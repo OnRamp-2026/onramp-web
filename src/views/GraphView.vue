@@ -21,15 +21,22 @@ const children = new Map<string, string[]>();
 const parent = new Map<string, string>();
 const adj = new Map<string, Set<string>>();
 const add = (k: string, v: string) => (adj.get(k) ?? adj.set(k, new Set()).get(k)!).add(v);
-for (const e of SPH_EDGES) { (children.get(e.a) ?? children.set(e.a, []).get(e.a)!).push(e.b); parent.set(e.b, e.a); add(e.a, e.b); add(e.b, e.a); }
+// 의미엣지(type="s")는 계층(children/parent)에서 분리해 개념 연결 전용 인접맵으로 보관.
+const semAdj = new Map<string, Set<string>>();
+const addSem = (k: string, v: string) => (semAdj.get(k) ?? semAdj.set(k, new Set()).get(k)!).add(v);
+for (const e of SPH_EDGES) {
+  add(e.a, e.b); add(e.b, e.a);
+  if (e.type === "s") { addSem(e.a, e.b); addSem(e.b, e.a); continue; }
+  (children.get(e.a) ?? children.set(e.a, []).get(e.a)!).push(e.b); parent.set(e.b, e.a);
+}
 const neighbors = (id: string) => adj.get(id) ?? new Set<string>();
 const degOf = (id: string) => neighbors(id).size;
 
 const PRESETS = [
-  { label: "Pod 디버그", q: "debug pod application" },
-  { label: "알럿 룰", q: "alert alerting rule" },
-  { label: "mod_rewrite", q: "rewrite mod url" },
-  { label: "대시보드", q: "dashboard widget graph" },
+  { label: "mod_rewrite", q: "rewrite mod_rewrite htaccess" },
+  { label: "kubectl 디버그", q: "kubectl pod debug" },
+  { label: "메트릭 타입", q: "histogram exemplars gauge" },
+  { label: "검증 절차", q: "검증" },
 ];
 
 const canvasEl = ref<HTMLCanvasElement | null>(null);
@@ -64,6 +71,10 @@ const radar = computed(() => {
 });
 
 function expandOf(id: string): string[] {
+  // 개념(의미엣지)으로 연결된 cross-domain 문서 우선 — "키워드 매칭이 놓친 연결"의 실체.
+  const sem = [...(semAdj.get(id) ?? [])];
+  if (sem.length) return sem;
+  // 의미 연결이 없으면 같은 폴더 형제로 폴백.
   if (kindOf(id) === "page") { const par = parent.get(id); return par ? (children.get(par) ?? []).filter((x) => x !== id) : []; }
   return children.get(id) ?? [];
 }
@@ -83,6 +94,12 @@ function runQuery(q: string) {
 }
 function clearQuery() { query.value = ""; denseHits.value = []; expandedHits.value = []; engine?.setHighlight([], []); }
 function pickNeighbor(id: string) { selected.value = id; engine?.setSelected(id); }
+function askChatbot() {
+  const m = selectedMeta.value;
+  if (!m) return;
+  const q = m.kind === "page" ? `${m.title} 관련 내용을 알려줘` : `${m.title} 영역에 대해 설명해줘`;
+  router.push({ path: "/chat", query: { ask: q } });
+}
 function toggleRotate() { rotating.value = !rotating.value; engine?.setAutorotate(rotating.value); }
 
 const legend = computed(() => SOURCE_ORDER.map((s) => ({ key: s, color: colorOfSrc(s), count: SPH_NODES.filter((n) => n.s === s && n.k === "page").length })));
@@ -186,12 +203,12 @@ onBeforeUnmount(() => engine?.destroy());
       <!-- 검색 경로 -->
       <transition name="slide">
         <div v-if="queryActive" class="absolute bottom-5 right-5 z-20 glass rounded-xl px-4 py-4 w-[290px] text-[#cfe0f5]">
-          <div class="flex items-center gap-2 mb-3"><span class="w-[7px] h-[7px] rounded-full bg-teal pulse"></span><span class="font-geo text-[13px] font-semibold text-white">검색 경로</span><span class="ml-auto font-mono text-[10px] text-[#7d93b5]">GraphRAG</span></div>
-          <div class="font-mono text-[10px] tracking-wide text-[#7d93b5] mb-1.5">① Dense 검색 · top {{ denseHits.length }}</div>
+          <div class="flex items-center gap-2 mb-3"><span class="w-[7px] h-[7px] rounded-full bg-teal pulse"></span><span class="font-geo text-[13px] font-semibold text-white">검색 경로</span><span class="ml-auto font-mono text-[10px] text-[#7d93b5]">지식 그래프 탐색</span></div>
+          <div class="font-mono text-[10px] tracking-wide text-[#7d93b5] mb-1.5">① 키워드 매칭 · top {{ denseHits.length }}</div>
           <div class="flex flex-col gap-1 mb-3"><div v-for="id in denseHits" :key="id" class="flex items-center gap-2 text-[12px]"><span class="w-2 h-2 rounded-full shrink-0" :style="{ background: colorOf(id) }"></span><span class="truncate">{{ metaOf(id).title }}</span></div></div>
-          <div class="font-mono text-[10px] tracking-wide text-teal mb-1.5">② + 그래프 1-hop 확장</div>
+          <div class="font-mono text-[10px] tracking-wide text-teal mb-1.5">② + 개념으로 연결 (1-hop)</div>
           <div class="flex flex-col gap-1 mb-3"><div v-for="id in expandedHits" :key="id" class="flex items-center gap-2 text-[12px]"><span class="w-2 h-2 rounded-full shrink-0 ring-1 ring-teal" :style="{ background: colorOf(id) }"></span><span class="truncate">{{ metaOf(id).title }}</span><span class="ml-auto font-mono text-[9px] text-teal">+graph</span></div><div v-if="!expandedHits.length" class="text-[11px] text-[#6c83a8]">연결 문서 없음</div></div>
-          <p class="text-[11px] leading-relaxed text-[#9fb6da] border-t border-white/10 pt-2.5">Dense 검색이 놓친 <b class="text-teal">연결 문서</b>를 그래프가 끌어와 답변 근거를 넓힙니다.</p>
+          <p class="text-[11px] leading-relaxed text-[#9fb6da] border-t border-white/10 pt-2.5">키워드 매칭이 놓친 <b class="text-teal">개념적으로 연결된 문서</b>를 지식 그래프가 끌어옵니다.</p>
         </div>
       </transition>
 
@@ -214,7 +231,7 @@ onBeforeUnmount(() => engine?.destroy());
               <div class="flex items-center gap-1.5 mb-1.5"><span class="text-[12px]">✨</span><span class="font-mono text-[10px] tracking-wide uppercase text-blue">AI 자동 요약</span></div>
               <p class="text-[13px] leading-relaxed text-ink">{{ selectedMeta.sum }}</p>
             </div>
-            <p v-else-if="selectedMeta.kind === 'page'" class="text-[12.5px] leading-relaxed text-slate">Confluence 실 문서 — 크롤러가 외부 제품 문서를 적재.</p>
+            <p v-else-if="selectedMeta.kind === 'page'" class="text-[12.5px] leading-relaxed text-slate">{{ selectedMeta.group === 'GitHub' ? 'GitHub PR·이슈 — 코드 저장소에서 적재된 문서입니다.' : selectedMeta.group + ' 실 문서 — 적재된 운영 지식입니다.' }}</p>
             <!-- 추적성·히스토리 -->
             <div v-if="selectedMeta.mod" class="flex items-center gap-3 mt-1 mb-1 font-mono text-[10.5px] text-faint">
               <span class="px-1.5 py-0.5 rounded bg-navy/[0.05]">v{{ selectedMeta.ver }}</span>
@@ -229,7 +246,7 @@ onBeforeUnmount(() => engine?.destroy());
               </button>
             </div>
           </div>
-          <div class="px-5 py-4 border-t border-line"><button class="w-full bg-grad text-white font-semibold text-[13px] py-2.5 rounded-xl hover:-translate-y-px transition shadow-[0_10px_24px_-12px_#2bb8c7]">이 문서로 챗봇에게 질문 →</button></div>
+          <div class="px-5 py-4 border-t border-line"><button @click="askChatbot" class="w-full bg-grad text-white font-semibold text-[13px] py-2.5 rounded-xl hover:-translate-y-px transition shadow-[0_10px_24px_-12px_#2bb8c7]">이 문서로 챗봇에게 질문 →</button></div>
         </aside>
       </transition>
     </div>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { useChatStore } from "@/stores/chat";
 import { useAuthStore } from "@/stores/auth";
 import AnswerCard from "@/components/chat/AnswerCard.vue";
@@ -8,6 +10,17 @@ import ChatComposer from "@/components/chat/ChatComposer.vue";
 
 const chat = useChatStore();
 const auth = useAuthStore();
+const route = useRoute();
+const router = useRouter();
+
+// 지식맵 등에서 ?ask=… 로 진입하면 해당 질문을 자동 전송 (기존 RAG /v1/chat 그대로 사용).
+onMounted(() => {
+  const ask = route.query.ask;
+  if (typeof ask === "string" && ask.trim()) {
+    router.replace({ query: {} }); // 새로고침 시 재전송 방지
+    chat.send(ask.trim());
+  }
+});
 </script>
 
 <template>
