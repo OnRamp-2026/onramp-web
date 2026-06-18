@@ -1,6 +1,15 @@
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 const DEV_AUTH_TOKEN = import.meta.env.VITE_DEV_AUTH_TOKEN ?? "";
 
+export class HttpError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
 export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (DEV_AUTH_TOKEN && !headers.has("Authorization")) {
@@ -14,12 +23,12 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   if (!res.ok) {
     let detail = `${res.status} ${res.statusText}`;
     try {
-      const body = (await res.json()) as { detail?: string; message?: string };
-      detail = body.detail ?? body.message ?? detail;
+      const body = (await res.json()) as { detail?: string | { message?: string }; message?: string };
+      detail = typeof body.detail === "string" ? body.detail : (body.detail?.message ?? body.message ?? detail);
     } catch {
       // Non-JSON upstream errors retain the HTTP status text.
     }
-    throw new Error(detail);
+    throw new HttpError(detail, res.status);
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
