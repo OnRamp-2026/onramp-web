@@ -127,10 +127,19 @@ const domainLabel = computed(() => DOMAIN_LABEL[props.msg.domain] ?? props.msg.d
       </button>
     </div>
 
-    <div class="flex gap-1">
-      <button @click="copyAnswer" class="px-2.5 py-1.5 rounded-lg text-[13px] text-faint hover:bg-navy/5 hover:text-ink">⧉ {{ copied ? "복사됨" : "복사" }}</button>
-      <button @click="vote('up')" class="px-2.5 py-1.5 rounded-lg text-[13px] hover:bg-navy/5" :class="voted === 'up' ? 'text-[#0f9c84]' : 'text-faint hover:text-ink'">👍</button>
-      <button @click="vote('down')" class="px-2.5 py-1.5 rounded-lg text-[13px] hover:bg-navy/5" :class="voted === 'down' ? 'text-[#b3344a]' : 'text-faint hover:text-ink'">👎</button>
+    <div class="flex gap-1 items-center">
+      <button @click="copyAnswer" class="px-2.5 py-1.5 rounded-lg text-[13px] text-faint hover:bg-navy/5 hover:text-ink transition">⧉ {{ copied ? "복사됨" : "복사" }}</button>
+      <button
+        @click="vote('up')"
+        class="px-2.5 py-1.5 rounded-lg text-[13px] transition"
+        :class="voted === 'up' ? 'bg-teal/15 text-[#0f9c84] ring-1 ring-teal/40' : 'text-faint hover:bg-navy/5 hover:text-ink'"
+      >👍</button>
+      <button
+        @click="vote('down')"
+        class="px-2.5 py-1.5 rounded-lg text-[13px] transition"
+        :class="voted === 'down' ? 'bg-[#fdecef] text-[#b3344a] ring-1 ring-[#f3c2cc]' : 'text-faint hover:bg-navy/5 hover:text-ink'"
+      >👎</button>
+      <span v-if="voted" class="font-mono text-[11px] text-faint ml-1.5">피드백 감사합니다</span>
     </div>
   </div>
 </template>
