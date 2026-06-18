@@ -36,7 +36,7 @@ spec:
   environment {
     IMAGE_REPOSITORY = 'amdp-registry.skala-ai.com/skala26a-cloud/onramp-web'
     GITOPS_REPOSITORY = 'https://github.com/OnRamp-2026/gitops.git'
-    GITOPS_VALUES_FILE = 'apps/onramp-web/values-dev.yaml'
+    GITOPS_VALUES_FILES = 'apps/onramp-web/values-dev.yaml apps/onramp-web/values-tenant1.yaml'
   }
 
   stages {
@@ -170,36 +170,38 @@ EOF
             node - <<'JS'
 const fs = require('fs');
 
-const path = process.env.GITOPS_VALUES_FILE;
+const paths = process.env.GITOPS_VALUES_FILES.split(/\s+/).filter(Boolean);
 const replacements = {
   'repository:': process.env.IMAGE_REPOSITORY,
   'tag:': process.env.IMAGE_TAG,
   'digest:': process.env.IMAGE_DIGEST,
 };
 
-const updatedLines = fs.readFileSync(path, 'utf8').split('\\n').map((line) => {
-  const stripped = line.replace(/^ +/, '');
-  const indent = line.slice(0, line.length - stripped.length);
+for (const path of paths) {
+  const updatedLines = fs.readFileSync(path, 'utf8').split('\\n').map((line) => {
+    const stripped = line.replace(/^ +/, '');
+    const indent = line.slice(0, line.length - stripped.length);
 
-  for (const [key, value] of Object.entries(replacements)) {
-    if (stripped.startsWith(key)) {
-      return `${indent}${key} ${value}`;
+    for (const [key, value] of Object.entries(replacements)) {
+      if (stripped.startsWith(key)) {
+        return `${indent}${key} ${value}`;
+      }
     }
-  }
-  return line;
-});
+    return line;
+  });
 
-fs.writeFileSync(path, updatedLines.join('\\n'));
+  fs.writeFileSync(path, updatedLines.join('\\n'));
+}
 JS
 
-            git diff -- "${GITOPS_VALUES_FILE}"
+            git diff -- ${GITOPS_VALUES_FILES}
 
-            if git diff --quiet -- "${GITOPS_VALUES_FILE}"; then
+            if git diff --quiet -- ${GITOPS_VALUES_FILES}; then
               echo "No GitOps image digest change."
               exit 0
             fi
 
-            git add "${GITOPS_VALUES_FILE}"
+            git add ${GITOPS_VALUES_FILES}
             git commit -m "chore: update onramp-web image ${IMAGE_TAG} [skip ci]"
             git push origin main
           '''
