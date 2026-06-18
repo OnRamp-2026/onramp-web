@@ -51,6 +51,69 @@ body {
   border-radius: 3px;
 }
 
+/* 마크다운 본문 (freeform answer_text·5요소) — Tailwind 리셋으로 사라진 리스트·표·강조 복원 (#44) */
+.prose-code > :first-child {
+  margin-top: 0;
+}
+.prose-code > :last-child {
+  margin-bottom: 0;
+}
+.prose-code p {
+  margin: 0.5em 0;
+}
+.prose-code ul {
+  list-style: disc;
+  padding-left: 1.4em;
+  margin: 0.45em 0;
+}
+.prose-code ol {
+  list-style: decimal;
+  padding-left: 1.4em;
+  margin: 0.45em 0;
+}
+.prose-code li {
+  margin: 0.15em 0;
+}
+.prose-code strong {
+  font-weight: 700;
+}
+.prose-code em {
+  font-style: italic;
+}
+.prose-code a {
+  color: #0f9c84;
+  text-decoration: underline;
+}
+.prose-code h1,
+.prose-code h2,
+.prose-code h3 {
+  font-weight: 700;
+  margin: 0.7em 0 0.3em;
+}
+.prose-code blockquote {
+  border-left: 3px solid #e2e8f0;
+  padding-left: 0.8em;
+  color: #64748b;
+  margin: 0.5em 0;
+}
+/* 표 — 좁은 컨테이너에서 넘치지 않게 가로 스크롤 */
+.prose-code table {
+  border-collapse: collapse;
+  margin: 0.5em 0;
+  display: block;
+  overflow-x: auto;
+}
+.prose-code th,
+.prose-code td {
+  border: 1px solid #e2e8f0;
+  padding: 5px 9px;
+  text-align: left;
+}
+.prose-code th {
+  background: #f3f7fb;
+  font-weight: 600;
+}
+
 /* pulse */
 @keyframes pulse {
   0% { box-shadow: 0 0 0 0 #1fa97f55; }

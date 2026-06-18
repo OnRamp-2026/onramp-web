@@ -57,6 +57,8 @@ export interface AssistantMessage {
   domain: Domain; // 영문 키 (표시는 DOMAIN_LABEL)
   answerability_status: AnswerabilityStatus;
   answerability_reason: string;
+  answer_format: "structured" | "freeform"; // 렌더 분기 (#191) — freeform이면 answer_text 사용
+  answer_text: string; // freeform 산문 답변 (structured면 "")
   five: FiveElements;
   sources: SourceDoc[];
   model_used?: string;

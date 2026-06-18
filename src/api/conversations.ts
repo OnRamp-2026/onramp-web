@@ -13,6 +13,8 @@ export interface ConversationMessageDto {
   role: "user" | "assistant";
   content: string;
   answer: FiveElements | null;
+  answer_format?: "structured" | "freeform";
+  answer_text?: string;
   sources: SourceDoc[];
   domain: Domain | "";
   answerability_status: AssistantMessage["answerability_status"] | "";
@@ -49,6 +51,8 @@ export function toChatMessage(dto: ConversationMessageDto): ChatMessage {
     domain: (dto.domain || "manual") as Domain,
     answerability_status: dto.answerability_status || "answerable",
     answerability_reason: dto.answerability_reason ?? "",
+    answer_format: dto.answer_format ?? "structured",
+    answer_text: dto.answer_text ?? "",
     five: dto.answer ?? { situation: "", cause: "", evidence: "", solution: "", infra_context: "" },
     sources: dto.sources ?? [],
     model_used: dto.model_used,

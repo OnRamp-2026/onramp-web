@@ -3,6 +3,7 @@ import { computed } from "vue";
 import BrandLogo from "@/components/brand/BrandLogo.vue";
 import type { AnswerabilityStatus, AssistantMessage, FiveElements, SourceDoc } from "@/types";
 import { DOMAIN_LABEL } from "@/types";
+import { renderMarkdown } from "@/utils/markdown";
 
 const props = defineProps<{ msg: AssistantMessage }>();
 defineEmits<{ openSource: [src: SourceDoc] }>();
@@ -62,7 +63,16 @@ const domainLabel = computed(() => DOMAIN_LABEL[props.msg.domain] ?? props.msg.d
         <span class="mt-px">◐</span><span>{{ msg.answerability_reason }}</span>
       </div>
 
-      <div class="bg-surface border border-line rounded-[14px] overflow-hidden shadow-[0_14px_34px_-26px_#16213e55]">
+      <!-- freeform: 산문 답변 (incident 외) — answer_text를 마크다운 렌더(살균 후 v-html) -->
+      <!-- eslint-disable-next-line vue/no-v-html -->
+      <div
+        v-if="msg.answer_format === 'freeform'"
+        class="bg-surface border border-line rounded-[14px] px-[18px] py-[16px] text-[14.5px] leading-[1.62] text-ink prose-code shadow-[0_14px_34px_-26px_#16213e55]"
+        v-html="renderMarkdown(msg.answer_text)"
+      ></div>
+
+      <!-- structured: 5요소 (incident) -->
+      <div v-else class="bg-surface border border-line rounded-[14px] overflow-hidden shadow-[0_14px_34px_-26px_#16213e55]">
         <div
           v-for="(el, i) in ELEMENTS"
           :key="el.key"
