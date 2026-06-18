@@ -17,6 +17,7 @@ export interface ChatResponse {
   domain: Domain; // 영문 classifier 키
   model_used: string;
   conversation_id?: string; // 로그인 시 저장된 대화 ID (익명이면 "")
+  trace_id?: string; // Langfuse trace id — 피드백 참조용
 }
 
 /** sendChat 결과 — 답변 메시지 + 저장된 대화 ID(이어가기/목록 동기화용) */
@@ -37,7 +38,14 @@ export function mapToAssistantMessage(raw: ChatResponse): AssistantMessage {
     five: raw.answer,
     sources: raw.sources ?? [],
     model_used: raw.model_used,
+    trace_id: raw.trace_id ?? "",
   };
+}
+
+/** 답변에 👍/👎 피드백을 Langfuse score로 기록. mock·trace 없으면 no-op (fire-and-forget). */
+export async function sendFeedback(traceId: string, value: number, comment = ""): Promise<void> {
+  if (USE_MOCK || !traceId) return;
+  await post("/v1/chat/feedback", { trace_id: traceId, value, comment });
 }
 
 /**

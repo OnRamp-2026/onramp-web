@@ -1,12 +1,36 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import BrandLogo from "@/components/brand/BrandLogo.vue";
 import type { AnswerabilityStatus, AssistantMessage, FiveElements, SourceDoc } from "@/types";
 import { DOMAIN_LABEL } from "@/types";
 import { renderMarkdown } from "@/utils/markdown";
+import { sendFeedback } from "@/api/chat";
 
 const props = defineProps<{ msg: AssistantMessage }>();
 defineEmits<{ openSource: [src: SourceDoc] }>();
+
+const copied = ref(false);
+const voted = ref<"up" | "down" | null>(null);
+
+/** 복사용 평문 — freeform이면 산문, structured면 5요소(태그 제거). */
+function answerPlainText(): string {
+  const m = props.msg;
+  if (m.answer_format === "freeform") return m.answer_text;
+  return ELEMENTS.map((e) => `[${e.label}] ${String(m.five[e.key]).replace(/<[^>]*>/g, "")}`).join("\n\n");
+}
+async function copyAnswer() {
+  try {
+    await navigator.clipboard.writeText(answerPlainText());
+    copied.value = true;
+    setTimeout(() => (copied.value = false), 1500);
+  } catch { /* 클립보드 차단 환경은 무시 */ }
+}
+async function vote(v: "up" | "down") {
+  voted.value = v;
+  try {
+    await sendFeedback(props.msg.trace_id ?? "", v === "up" ? 1.0 : 0.0);
+  } catch { /* 피드백 실패는 사용자 흐름을 막지 않음 */ }
+}
 
 const ELEMENTS: { key: keyof FiveElements; num: string; label: string }[] = [
   { key: "situation", num: "01", label: "현재 상황" },
@@ -104,10 +128,9 @@ const domainLabel = computed(() => DOMAIN_LABEL[props.msg.domain] ?? props.msg.d
     </div>
 
     <div class="flex gap-1">
-      <button class="px-2.5 py-1.5 rounded-lg text-[13px] text-faint hover:bg-navy/5 hover:text-ink">⭐ 자산화</button>
-      <button class="px-2.5 py-1.5 rounded-lg text-[13px] text-faint hover:bg-navy/5 hover:text-ink">⧉ 복사</button>
-      <button class="px-2.5 py-1.5 rounded-lg text-[13px] text-faint hover:bg-navy/5 hover:text-ink">👍</button>
-      <button class="px-2.5 py-1.5 rounded-lg text-[13px] text-faint hover:bg-navy/5 hover:text-ink">👎</button>
+      <button @click="copyAnswer" class="px-2.5 py-1.5 rounded-lg text-[13px] text-faint hover:bg-navy/5 hover:text-ink">⧉ {{ copied ? "복사됨" : "복사" }}</button>
+      <button @click="vote('up')" class="px-2.5 py-1.5 rounded-lg text-[13px] hover:bg-navy/5" :class="voted === 'up' ? 'text-[#0f9c84]' : 'text-faint hover:text-ink'">👍</button>
+      <button @click="vote('down')" class="px-2.5 py-1.5 rounded-lg text-[13px] hover:bg-navy/5" :class="voted === 'down' ? 'text-[#b3344a]' : 'text-faint hover:text-ink'">👎</button>
     </div>
   </div>
 </template>
