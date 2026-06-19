@@ -33,10 +33,6 @@ function onEnter(e: KeyboardEvent) {
         @keydown.enter="onEnter"
       ></textarea>
       <div class="flex items-center gap-2.5">
-        <span
-          class="flex items-center gap-1.5 font-mono text-[11px] text-slate border border-line rounded-lg px-2.5 py-1.5 cursor-pointer hover:border-teal hover:text-[#0f9c84]"
-          >＃ 도메인: 자동 라우팅</span
-        >
         <span class="flex-1"></span>
         <button
           @click="submit"
