@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
+import { computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useChatStore } from "@/stores/chat";
 import { useAuthStore } from "@/stores/auth";
+import { DOMAIN_LABEL } from "@/types";
 import AnswerCard from "@/components/chat/AnswerCard.vue";
 import SourceModal from "@/components/chat/SourceModal.vue";
 import ModelSelector from "@/components/chat/ModelSelector.vue";
@@ -12,6 +13,18 @@ const chat = useChatStore();
 const auth = useAuthStore();
 const route = useRoute();
 const router = useRouter();
+
+// 헤더 브레드크럼 — 실제 대화 상태 기반 (대화 없으면 중립 라벨, 하드코딩 제거)
+const headerDomain = computed(() => {
+  for (let i = chat.messages.length - 1; i >= 0; i--) {
+    const m = chat.messages[i];
+    if (m.role === "assistant") return DOMAIN_LABEL[m.domain] ?? "챗봇";
+  }
+  return "챗봇";
+});
+const headerTitle = computed(
+  () => chat.conversations.find((c) => c.conversation_id === chat.activeId)?.title ?? ""
+);
 
 // 지식맵 등에서 ?ask=… 로 진입하면 해당 질문을 자동 전송 (기존 RAG /v1/chat 그대로 사용).
 onMounted(() => {
@@ -26,8 +39,8 @@ onMounted(() => {
 <template>
   <main class="flex flex-col h-screen flex-1 overflow-hidden">
     <header class="flex items-center gap-3.5 px-[30px] py-3.5 border-b border-line bg-white/80 backdrop-blur">
-      <span class="font-geo text-base font-semibold text-navy">장애 대응</span>
-      <span class="font-mono text-[11px] text-faint">/ EKS Pod CrashLoopBackOff</span>
+      <span class="font-geo text-base font-semibold text-navy">{{ headerDomain }}</span>
+      <span v-if="headerTitle" class="font-mono text-[11px] text-faint">/ {{ headerTitle }}</span>
       <span class="flex-1"></span>
       <span
         v-if="auth.user"
@@ -35,9 +48,6 @@ onMounted(() => {
         title="질의는 소속 회사(테넌트) KB로 스코프됩니다"
       >
         ▣ {{ auth.user.tenant.label }} KB
-      </span>
-      <span class="flex items-center gap-1.5 font-mono text-[11px] text-slate">
-        <span class="w-[7px] h-[7px] rounded-full bg-ok pulse"></span> 색인 최신 · 09:00
       </span>
       <ModelSelector />
     </header>
