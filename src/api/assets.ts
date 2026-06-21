@@ -128,6 +128,47 @@ interface TranscriptionStatusResponse {
   updated_at: string;
 }
 
+export interface AssetHistoryItemResponse {
+  asset_id: string;
+  transcription_id: string;
+  report_id: string | null;
+  title: string;
+  category: string;
+  status: "processing" | "draft" | "completed" | "failed";
+  workflow_status: string;
+  confluence_url: string;
+  created_at: string;
+  updated_at: string;
+  source: {
+    filename: string;
+    content_type: string;
+    size_bytes: number;
+  };
+  progress: {
+    total_chunks: number;
+    completed_chunks: number;
+    failed_chunks: number;
+    percent: number;
+  };
+  report: FiveElements | null;
+}
+
+interface AssetHistoryListResponse {
+  items: AssetHistoryItemResponse[];
+  counts: {
+    all: number;
+    processing: number;
+    draft: number;
+    completed: number;
+    failed: number;
+  };
+}
+
+export interface AssetHistory {
+  items: AssetReport[];
+  counts: AssetHistoryListResponse["counts"];
+}
+
 export interface ReportResponse {
   report_id: string;
   title: string;
@@ -216,6 +257,80 @@ async function waitForReport(transcriptionId: string, onProgress?: GenerationPro
 function domainFromCategory(category: string, fallback: Domain): Domain {
   const matched = (Object.keys(DOMAIN_LABEL) as Domain[]).find((domain) => DOMAIN_LABEL[domain] === category);
   return matched ?? fallback;
+}
+
+const EMPTY_FIVE: FiveElements = {
+  situation: "",
+  cause: "",
+  evidence: "",
+  solution: "",
+  infra_context: "",
+};
+
+export function mapAssetHistoryItem(raw: AssetHistoryItemResponse): AssetReport {
+  const createdAt = new Date(raw.created_at).toLocaleString();
+  const status = raw.status === "completed" ? "published" : raw.status;
+  return {
+    id: raw.report_id ?? raw.asset_id,
+    title: raw.title,
+    domain: domainFromCategory(raw.category, "incident"),
+    space: "OPS",
+    status,
+    createdAt,
+    drafter: raw.report ? "AI 초안" : raw.status === "failed" ? "처리 실패" : "AI 처리 중",
+    meta: {
+      incidentId: raw.transcription_id,
+      author: "현재 사용자",
+      occurredAt: createdAt,
+      severity: "P3",
+    },
+    source: {
+      kind: "transcript",
+      title: raw.source.filename,
+      meta: `${(raw.source.size_bytes / 1024 / 1024).toFixed(1)} MB · 녹취 음성`,
+      excerpt:
+        raw.status === "failed"
+          ? "STT 또는 보고서 생성 중 오류가 발생했습니다."
+          : raw.report
+            ? "교정된 STT 전사문을 기반으로 생성된 보고서입니다."
+            : "STT 및 보고서 생성을 처리하고 있습니다.",
+    },
+    edited: {},
+    five: raw.report ?? { ...EMPTY_FIVE },
+    confluenceUrl: raw.confluence_url || undefined,
+    workflowStatus: raw.workflow_status,
+    progress: {
+      totalChunks: raw.progress.total_chunks,
+      completedChunks: raw.progress.completed_chunks,
+      failedChunks: raw.progress.failed_chunks,
+      percent: raw.progress.percent,
+    },
+  };
+}
+
+/** GET /v1/assets — 로그인 사용자의 자산화 처리 이력 */
+export async function fetchAssetHistory(): Promise<AssetHistory> {
+  const response = await get<AssetHistoryListResponse>("/v1/assets");
+  return {
+    items: response.items.map(mapAssetHistoryItem),
+    counts: response.counts,
+  };
+}
+
+export async function listAssets(): Promise<AssetHistory> {
+  if (USE_MOCK) {
+    return {
+      items: [...MOCK_ASSETS],
+      counts: {
+        all: MOCK_ASSETS.length,
+        processing: 0,
+        draft: MOCK_ASSETS.filter((asset) => asset.status === "draft").length,
+        completed: MOCK_ASSETS.filter((asset) => asset.status === "published").length,
+        failed: 0,
+      },
+    };
+  }
+  return fetchAssetHistory();
 }
 
 export function mapReportResponse(raw: ReportResponse, form: UploadForm): AssetReport {

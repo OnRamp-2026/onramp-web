@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useAssetsStore } from "@/stores/assets";
 import { ELEMENTS } from "@/api/assets";
 import AssetField from "@/components/assets/AssetField.vue";
@@ -14,9 +14,11 @@ const store = useAssetsStore();
 const vFocus = { mounted: (el: HTMLElement) => el.focus() };
 
 const STATUS: Record<AssetStatus, { label: string; dot: string; soft: string }> = {
+  processing: { label: "처리중", dot: "bg-blue", soft: "bg-blue/10 text-[#1668b3]" },
   draft: { label: "초안", dot: "bg-faint", soft: "bg-navy/[0.05] text-slate" },
   review: { label: "검토 중", dot: "bg-blue", soft: "bg-blue/10 text-[#1668b3]" },
-  published: { label: "등록됨", dot: "bg-ok", soft: "bg-teal/10 text-[#0f9c84]" },
+  published: { label: "완료", dot: "bg-ok", soft: "bg-teal/10 text-[#0f9c84]" },
+  failed: { label: "실패", dot: "bg-[#d4495f]", soft: "bg-[#fdecef] text-[#d4495f]" },
 };
 
 const SEV: Record<Severity, { label: string; cls: string }> = {
@@ -28,17 +30,19 @@ const SEV: Record<Severity, { label: string; cls: string }> = {
 const FILTERS = [
   { key: "all", label: "전체" },
   { key: "draft", label: "초안" },
-  { key: "review", label: "검토중" },
-  { key: "published", label: "등록됨" },
+  { key: "processing", label: "처리중" },
+  { key: "published", label: "완료" },
 ] as const;
 const filter = ref<(typeof FILTERS)[number]["key"]>("all");
-const filtered = computed(() =>
-  filter.value === "all" ? store.list : store.list.filter((a) => a.status === filter.value),
-);
+const filtered = computed(() => {
+  if (filter.value === "all") return store.list;
+  if (filter.value === "draft") return store.list.filter((a) => a.status === "draft" || a.status === "review");
+  return store.list.filter((a) => a.status === filter.value);
+});
 const counts = computed(() => ({
   all: store.list.length,
-  draft: store.list.filter((a) => a.status === "draft").length,
-  review: store.list.filter((a) => a.status === "review").length,
+  draft: store.list.filter((a) => a.status === "draft" || a.status === "review").length,
+  processing: store.list.filter((a) => a.status === "processing").length,
   published: store.list.filter((a) => a.status === "published").length,
 }));
 
@@ -46,7 +50,7 @@ const counts = computed(() => ({
 const editingTitle = ref(false);
 const titleDraft = ref("");
 function openTitle() {
-  if (store.active?.status === "published") return;
+  if (!store.active || !["draft", "review"].includes(store.active.status)) return;
   titleDraft.value = store.active?.title ?? "";
   editingTitle.value = true;
 }
@@ -69,6 +73,10 @@ async function doPublish() {
   await store.publish();
   confirmPublish.value = false;
 }
+
+onMounted(() => {
+  void store.loadHistory();
+});
 </script>
 
 <template>
@@ -107,6 +115,10 @@ async function doPublish() {
       </div>
 
       <div class="flex-1 overflow-auto px-2.5 pb-3 flex flex-col gap-1">
+        <p v-if="store.historyLoading" class="text-center text-[12px] text-faint py-4">이력을 불러오는 중입니다</p>
+        <p v-else-if="store.historyError" class="mx-2 mb-2 text-[11px] text-[#d4495f]">
+          {{ store.historyError }}
+        </p>
         <button
           v-for="a in filtered"
           :key="a.id"
@@ -149,6 +161,53 @@ async function doPublish() {
         </div>
       </div>
 
+      <!-- 서버 처리 상태 -->
+      <div
+        v-else-if="store.active.status === 'processing' || store.active.status === 'failed'"
+        class="flex-1 grid place-items-center bg-surf2/50 px-8"
+      >
+        <div
+          class="w-full max-w-[560px] bg-white border border-line rounded-2xl p-6 shadow-[0_18px_50px_-36px_#16213e66]"
+        >
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full" :class="STATUS[store.active.status].dot"></span>
+            <span class="font-mono text-[11px]" :class="STATUS[store.active.status].soft">
+              {{ STATUS[store.active.status].label }}
+            </span>
+          </div>
+          <h2 class="font-geo text-xl font-semibold text-navy mt-3">{{ store.active.title }}</h2>
+          <p class="text-sm text-slate mt-2">
+            {{
+              store.active.status === "failed"
+                ? "STT 또는 보고서 생성 중 오류가 발생했습니다."
+                : "STT 전사와 5요소 보고서 생성을 진행하고 있습니다."
+            }}
+          </p>
+          <div class="mt-5">
+            <div class="flex justify-between font-mono text-[11px] text-faint mb-2">
+              <span>{{ store.active.workflowStatus }}</span>
+              <span>{{ store.active.progress?.percent ?? 0 }}%</span>
+            </div>
+            <div class="h-2 rounded-full bg-navy/[0.07] overflow-hidden">
+              <div
+                class="h-full rounded-full transition-all"
+                :class="store.active.status === 'failed' ? 'bg-[#d4495f]' : 'bg-grad'"
+                :style="{ width: `${store.active.progress?.percent ?? 0}%` }"
+              ></div>
+            </div>
+          </div>
+          <div class="mt-5 pt-4 border-t border-line flex items-center justify-between">
+            <span class="font-mono text-[10.5px] text-faint">{{ store.active.source.title }}</span>
+            <button
+              class="text-[12px] px-3 py-2 rounded-xl border border-line2 text-slate hover:text-ink"
+              @click="store.loadHistory()"
+            >
+              새로고침
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- 단계 3·4: HITL 에디터 -->
       <template v-else>
         <header class="flex items-start gap-3 px-[30px] py-3.5 border-b border-line bg-white/80 backdrop-blur z-10">
@@ -178,8 +237,8 @@ async function doPublish() {
             <h2
               v-else
               class="font-geo text-lg font-semibold text-navy truncate"
-              :class="store.active.status !== 'published' ? 'cursor-text hover:text-ink/80' : ''"
-              :title="store.active.status !== 'published' ? '클릭해 제목 수정' : ''"
+              :class="['draft', 'review'].includes(store.active.status) ? 'cursor-text hover:text-ink/80' : ''"
+              :title="['draft', 'review'].includes(store.active.status) ? '클릭해 제목 수정' : ''"
               @click="openTitle"
             >
               {{ store.active.title }}
@@ -211,9 +270,11 @@ async function doPublish() {
           <span class="font-mono text-[11px] text-slate flex items-center gap-1.5">
             <span class="text-faint">🕘</span>{{ store.active.meta.occurredAt }}
           </span>
-          <span class="font-mono text-[10.5px] px-2 py-[3px] rounded-full" :class="SEV[store.active.meta.severity].cls">{{
-            SEV[store.active.meta.severity].label
-          }}</span>
+          <span
+            class="font-mono text-[10.5px] px-2 py-[3px] rounded-full"
+            :class="SEV[store.active.meta.severity].cls"
+            >{{ SEV[store.active.meta.severity].label }}</span
+          >
           <span class="flex-1"></span>
           <FlowStepper :current="store.currentStep" compact />
         </div>
@@ -265,7 +326,9 @@ async function doPublish() {
                 <span class="font-mono text-[10px] tracking-[0.1em] uppercase text-faint">5요소 보고서</span>
                 <span class="text-[11px] text-faint">— 각 항목을 클릭해 검수·수정</span>
               </div>
-              <div class="bg-surface border border-line rounded-[14px] overflow-hidden shadow-[0_14px_34px_-26px_#16213e55]">
+              <div
+                class="bg-surface border border-line rounded-[14px] overflow-hidden shadow-[0_14px_34px_-26px_#16213e55]"
+              >
                 <AssetField
                   v-for="el in ELEMENTS"
                   :key="el.key"
@@ -296,7 +359,10 @@ async function doPublish() {
               :disabled="store.saving"
               @click="store.save()"
             >
-              <span v-if="store.saving" class="w-3 h-3 rounded-full border-2 border-slate/30 border-t-slate animate-spin"></span>
+              <span
+                v-if="store.saving"
+                class="w-3 h-3 rounded-full border-2 border-slate/30 border-t-slate animate-spin"
+              ></span>
               임시 저장
             </button>
 
@@ -307,10 +373,16 @@ async function doPublish() {
                 :disabled="store.publishing"
                 @click="doPublish"
               >
-                <span v-if="store.publishing" class="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin"></span>
+                <span
+                  v-if="store.publishing"
+                  class="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin"
+                ></span>
                 {{ store.publishing ? "등록 중…" : "확인, 등록" }}
               </button>
-              <button class="text-[12px] px-2.5 py-2 rounded-xl text-slate hover:bg-navy/5" @click="confirmPublish = false">
+              <button
+                class="text-[12px] px-2.5 py-2 rounded-xl text-slate hover:bg-navy/5"
+                @click="confirmPublish = false"
+              >
                 취소
               </button>
             </div>
