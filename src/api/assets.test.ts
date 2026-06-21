@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchAssetHistory, mapAssetHistoryItem, mapReportResponse, uploadTranscription } from "@/api/assets";
+import {
+  deleteAsset,
+  fetchAssetHistory,
+  mapAssetHistoryItem,
+  mapReportResponse,
+  uploadTranscription,
+} from "@/api/assets";
 import type { UploadForm } from "@/types";
 
 const form: UploadForm = {
@@ -75,9 +81,11 @@ describe("STT asset API", () => {
         updated_at: "2026-06-14T13:00:00Z",
       },
       form,
+      "transcription-1",
     );
 
     expect(asset.id).toBe("report-1");
+    expect(asset.transcriptionId).toBe("transcription-1");
     expect(asset.domain).toBe("incident");
     expect(asset.meta.incidentId).toBe("INC-1");
     expect(asset.five.solution).toBe("해결");
@@ -88,7 +96,7 @@ describe("STT asset API", () => {
       new Response(
         JSON.stringify({
           items: [],
-          counts: { all: 0, processing: 0, draft: 0, completed: 0, failed: 0 },
+          counts: { all: 0, processing: 0, draft: 0, deleting: 0, completed: 0, failed: 0 },
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
@@ -130,6 +138,7 @@ describe("STT asset API", () => {
     });
 
     expect(asset.status).toBe("processing");
+    expect(asset.transcriptionId).toBe("transcription-1");
     expect(asset.progress?.percent).toBe(40);
     expect(asset.five).toEqual({
       situation: "",
@@ -138,5 +147,22 @@ describe("STT asset API", () => {
       solution: "",
       infra_context: "",
     });
+  });
+
+  it("requests permanent deletion by transcription id", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ transcription_id: "transcription-1", status: "deleting" }), {
+        status: 202,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const response = await deleteAsset("transcription-1");
+
+    expect(response.status).toBe("deleting");
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/v1/assets/transcription-1"),
+      expect.objectContaining({ method: "DELETE", credentials: "include" }),
+    );
   });
 });

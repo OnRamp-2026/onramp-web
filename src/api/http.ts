@@ -56,6 +56,6 @@ export function patch<T>(path: string, body: unknown): Promise<T> {
   return request<T>(path, jsonInit("PATCH", body));
 }
 
-export function del(path: string): Promise<void> {
-  return request<void>(path, { method: "DELETE" });
+export function del<T = void>(path: string): Promise<T> {
+  return request<T>(path, { method: "DELETE" });
 }

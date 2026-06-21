@@ -11,9 +11,9 @@ export const DOMAIN_LABEL: Record<Domain, string> = {
 };
 
 /** 드롭다운 등 선택 옵션 (영문 값 + 한글 라벨) */
-export const DOMAIN_OPTIONS: { value: Domain; label: string }[] = (
-  Object.keys(DOMAIN_LABEL) as Domain[]
-).map((value) => ({ value, label: DOMAIN_LABEL[value] }));
+export const DOMAIN_OPTIONS: { value: Domain; label: string }[] = (Object.keys(DOMAIN_LABEL) as Domain[]).map(
+  (value) => ({ value, label: DOMAIN_LABEL[value] }),
+);
 
 /** 답변 가능성 상태 — 백엔드 AnswerabilityStatus enum과 동일 */
 export type AnswerabilityStatus =
@@ -82,7 +82,7 @@ export interface HistoryItem {
 /* ───────────── 자산화 (Knowledge Asset · HITL) ───────────── */
 
 /** 처리중 → 초안 → 검토중 → 등록됨. 실패 항목은 이력에서 재확인한다. */
-export type AssetStatus = "processing" | "draft" | "review" | "published" | "failed";
+export type AssetStatus = "processing" | "draft" | "review" | "deleting" | "published" | "failed";
 
 /** 자산화 원천 — 녹취 또는 대화 */
 export interface AssetSource {
@@ -106,6 +106,7 @@ export interface AssetMeta {
 /** 자산화 보고서 — 5요소 구조화. 백엔드 AssetReport 계약과 정합. */
 export interface AssetReport {
   id: string; // 예: AST-2041
+  transcriptionId: string;
   title: string;
   domain: Domain;
   space: string; // Confluence space, 예: OPS
