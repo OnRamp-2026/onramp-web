@@ -7,6 +7,14 @@ const props = defineProps<{ source: SourceDoc }>();
 defineEmits<{ close: [] }>();
 
 const domainLabel = computed(() => (props.source.domain ? DOMAIN_LABEL[props.source.domain] : ""));
+
+// 출처는 GitHub(이슈·PR)·Confluence·외부 공식문서가 섞여 있어, url로 판별해 출처별 라벨을 보인다.
+const openLabel = computed(() => {
+  const u = props.source.url || "";
+  if (u.includes("github.com")) return "GitHub에서 열기";
+  if (u.includes("atlassian.net") || u.includes("/wiki/")) return "Confluence에서 열기";
+  return "원문 열기";
+});
 </script>
 
 <template>
@@ -29,7 +37,7 @@ const domainLabel = computed(() => (props.source.domain ? DOMAIN_LABEL[props.sou
 
       <div class="px-[22px] py-5 overflow-auto text-sm leading-[1.7]">
         <p v-if="source.content_snippet" class="whitespace-pre-line text-slate">{{ source.content_snippet }}</p>
-        <p v-else class="text-faint">미리보기를 불러올 수 없습니다. Confluence 원문을 확인하세요.</p>
+        <p v-else class="text-faint">미리보기를 불러올 수 없습니다. 원문을 확인하세요.</p>
       </div>
 
       <div class="px-[22px] py-3.5 border-t border-line flex justify-end">
@@ -38,7 +46,7 @@ const domainLabel = computed(() => (props.source.domain ? DOMAIN_LABEL[props.sou
           target="_blank"
           rel="noopener"
           class="inline-flex items-center gap-2 border border-line2 bg-surf2 px-3.5 py-2.5 rounded-[9px] text-[13px] hover:border-teal hover:text-[#0f9c84]"
-          >Confluence에서 열기 ↗</a
+          >{{ openLabel }} ↗</a
         >
       </div>
     </div>

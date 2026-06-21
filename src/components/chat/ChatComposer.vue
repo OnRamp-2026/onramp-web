@@ -44,7 +44,7 @@ function onEnter(e: KeyboardEvent) {
       </div>
     </div>
     <div class="max-w-[768px] mx-auto mt-2 text-center font-mono text-[10.5px] text-faint">
-      OnRamp는 사내 Confluence 지식만 근거로 답합니다 · 출처를 항상 확인하세요
+      OnRamp는 사내 지식(Confluence·GitHub)만 근거로 답합니다 · 출처를 항상 확인하세요
     </div>
   </div>
 </template>
