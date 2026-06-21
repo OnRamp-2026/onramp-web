@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mapReportResponse, uploadTranscription } from "@/api/assets";
+import { fetchAssetHistory, mapAssetHistoryItem, mapReportResponse, uploadTranscription } from "@/api/assets";
 import type { UploadForm } from "@/types";
 
 const form: UploadForm = {
@@ -81,5 +81,62 @@ describe("STT asset API", () => {
     expect(asset.domain).toBe("incident");
     expect(asset.meta.incidentId).toBe("INC-1");
     expect(asset.five.solution).toBe("해결");
+  });
+
+  it("loads the signed-in user's asset history", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          items: [],
+          counts: { all: 0, processing: 0, draft: 0, completed: 0, failed: 0 },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const response = await fetchAssetHistory();
+
+    expect(response.items).toEqual([]);
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/v1/assets"),
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
+  it("maps processing history without a report", () => {
+    const asset = mapAssetHistoryItem({
+      asset_id: "transcription-1",
+      transcription_id: "transcription-1",
+      report_id: null,
+      title: "장애 대응 회의",
+      category: "장애대응",
+      status: "processing",
+      workflow_status: "transcribing",
+      confluence_url: "",
+      created_at: "2026-06-21T09:00:00Z",
+      updated_at: "2026-06-21T09:05:00Z",
+      source: {
+        filename: "incident.m4a",
+        content_type: "audio/mp4",
+        size_bytes: 1048576,
+      },
+      progress: {
+        total_chunks: 10,
+        completed_chunks: 4,
+        failed_chunks: 0,
+        percent: 40,
+      },
+      report: null,
+    });
+
+    expect(asset.status).toBe("processing");
+    expect(asset.progress?.percent).toBe(40);
+    expect(asset.five).toEqual({
+      situation: "",
+      cause: "",
+      evidence: "",
+      solution: "",
+      infra_context: "",
+    });
   });
 });

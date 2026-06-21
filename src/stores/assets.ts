@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import type { AssetReport, FiveElements, UploadForm } from "@/types";
-import { ASSET_MOCK_ENABLED, MOCK_ASSETS, generateDraft, saveAsset, approveAsset } from "@/api/assets";
+import { ASSET_MOCK_ENABLED, MOCK_ASSETS, approveAsset, generateDraft, listAssets, saveAsset } from "@/api/assets";
 
 export const useAssetsStore = defineStore("assets", () => {
   const list = ref<AssetReport[]>(ASSET_MOCK_ENABLED ? [...MOCK_ASSETS] : []);
@@ -13,6 +13,8 @@ export const useAssetsStore = defineStore("assets", () => {
   const publishing = ref(false);
   const generationStatus = ref("");
   const generationError = ref("");
+  const historyLoading = ref(false);
+  const historyError = ref("");
 
   const active = computed(() => list.value.find((a) => a.id === activeId.value) ?? null);
 
@@ -26,6 +28,20 @@ export const useAssetsStore = defineStore("assets", () => {
     generationStatus.value = "";
     generationError.value = "";
   };
+
+  async function loadHistory() {
+    if (historyLoading.value) return;
+    historyLoading.value = true;
+    historyError.value = "";
+    try {
+      const history = await listAssets();
+      list.value = history.items;
+    } catch (error) {
+      historyError.value = error instanceof Error ? error.message : "자산화 이력을 불러오지 못했습니다";
+    } finally {
+      historyLoading.value = false;
+    }
+  }
 
   /** UC-08 — 업로드 → 5요소 초안 생성 */
   async function createFromUpload(form: UploadForm) {
@@ -51,7 +67,7 @@ export const useAssetsStore = defineStore("assets", () => {
   /** HITL 인라인 수정 — 첫 수정 시 draft→review 승격, published는 잠금 */
   function editField(key: keyof FiveElements, value: string) {
     const a = active.value;
-    if (!a || a.status === "published") return;
+    if (!a || !["draft", "review"].includes(a.status)) return;
     a.five[key] = value;
     a.edited[key] = true;
     if (a.status === "draft") a.status = "review";
@@ -59,12 +75,12 @@ export const useAssetsStore = defineStore("assets", () => {
 
   function setTitle(title: string) {
     const a = active.value;
-    if (a && a.status !== "published") a.title = title;
+    if (a && ["draft", "review"].includes(a.status)) a.title = title;
   }
 
   async function save() {
     const a = active.value;
-    if (!a || saving.value || a.status === "published") return;
+    if (!a || saving.value || !["draft", "review"].includes(a.status)) return;
     saving.value = true;
     try {
       Object.assign(a, await saveAsset(a));
@@ -75,7 +91,7 @@ export const useAssetsStore = defineStore("assets", () => {
 
   async function publish() {
     const a = active.value;
-    if (!a || publishing.value || a.status === "published") return;
+    if (!a || publishing.value || !["draft", "review"].includes(a.status)) return;
     publishing.value = true;
     try {
       Object.assign(a, await approveAsset(a));
@@ -95,6 +111,7 @@ export const useAssetsStore = defineStore("assets", () => {
   const currentStep = computed(() => {
     if (generating.value) return 2;
     if (composing.value || !active.value) return 1;
+    if (active.value.status === "processing" || active.value.status === "failed") return 2;
     return active.value.status === "published" ? 4 : 3;
   });
 
@@ -107,11 +124,14 @@ export const useAssetsStore = defineStore("assets", () => {
     publishing,
     generationStatus,
     generationError,
+    historyLoading,
+    historyError,
     active,
     completeness,
     currentStep,
     select,
     startNew,
+    loadHistory,
     createFromUpload,
     editField,
     setTitle,

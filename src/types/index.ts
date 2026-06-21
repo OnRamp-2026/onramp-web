@@ -81,8 +81,8 @@ export interface HistoryItem {
 
 /* ───────────── 자산화 (Knowledge Asset · HITL) ───────────── */
 
-/** 초안(draft) → 검토중(review) → 등록됨(published, 잠금). 백엔드 approve 후 409 가드와 정합. */
-export type AssetStatus = "draft" | "review" | "published";
+/** 처리중 → 초안 → 검토중 → 등록됨. 실패 항목은 이력에서 재확인한다. */
+export type AssetStatus = "processing" | "draft" | "review" | "published" | "failed";
 
 /** 자산화 원천 — 녹취 또는 대화 */
 export interface AssetSource {
@@ -117,6 +117,13 @@ export interface AssetReport {
   edited: Partial<Record<keyof FiveElements, boolean>>; // HITL 수정된 요소
   source: AssetSource;
   confluenceUrl?: string; // 등록 후 부여
+  workflowStatus?: string;
+  progress?: {
+    totalChunks: number;
+    completedChunks: number;
+    failedChunks: number;
+    percent: number;
+  };
 }
 
 /** 업로드 진입 폼 (단계 1) — 음성 녹취 파일 업로드 → STT 전사 → 5요소 보고서 */
