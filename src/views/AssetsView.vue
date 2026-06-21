@@ -15,6 +15,7 @@ const vFocus = { mounted: (el: HTMLElement) => el.focus() };
 
 const STATUS: Record<AssetStatus, { label: string; dot: string; soft: string }> = {
   processing: { label: "처리중", dot: "bg-blue", soft: "bg-blue/10 text-[#1668b3]" },
+  deleting: { label: "삭제 중", dot: "bg-[#b76e00]", soft: "bg-[#fff3e3] text-[#b76e00]" },
   draft: { label: "초안", dot: "bg-faint", soft: "bg-navy/[0.05] text-slate" },
   review: { label: "검토 중", dot: "bg-blue", soft: "bg-blue/10 text-[#1668b3]" },
   published: { label: "완료", dot: "bg-ok", soft: "bg-teal/10 text-[#0f9c84]" },
@@ -37,12 +38,14 @@ const filter = ref<(typeof FILTERS)[number]["key"]>("all");
 const filtered = computed(() => {
   if (filter.value === "all") return store.list;
   if (filter.value === "draft") return store.list.filter((a) => a.status === "draft" || a.status === "review");
+  if (filter.value === "processing")
+    return store.list.filter((a) => a.status === "processing" || a.status === "deleting");
   return store.list.filter((a) => a.status === filter.value);
 });
 const counts = computed(() => ({
   all: store.list.length,
   draft: store.list.filter((a) => a.status === "draft" || a.status === "review").length,
-  processing: store.list.filter((a) => a.status === "processing").length,
+  processing: store.list.filter((a) => a.status === "processing" || a.status === "deleting").length,
   published: store.list.filter((a) => a.status === "published").length,
 }));
 
@@ -62,16 +65,23 @@ function commitTitle() {
 const sourceOpen = ref(true);
 
 const confirmPublish = ref(false);
+const confirmDelete = ref(false);
 watch(
   () => store.activeId,
   () => {
     confirmPublish.value = false;
+    confirmDelete.value = false;
     editingTitle.value = false;
   },
 );
 async function doPublish() {
   await store.publish();
   confirmPublish.value = false;
+}
+async function doDelete() {
+  if (!store.active) return;
+  await store.removeDraft(store.active);
+  confirmDelete.value = false;
 }
 
 onMounted(() => {
@@ -96,6 +106,9 @@ onMounted(() => {
         >
           <span class="text-[15px] leading-none">＋</span> 새 자산화
         </button>
+        <p v-if="store.generating" class="mt-2 text-[11px] text-[#1668b3]">
+          생성 작업 진행 중 · 다른 이력을 계속 확인할 수 있습니다
+        </p>
       </div>
 
       <div class="flex gap-1 px-4 pb-2.5">
@@ -150,7 +163,7 @@ onMounted(() => {
     <!-- ───────── 우측 ───────── -->
     <section class="flex-1 flex flex-col overflow-hidden">
       <!-- 단계 1·2: 업로드 진입 -->
-      <UploadEntry v-if="store.composing || store.generating" />
+      <UploadEntry v-if="store.composing" />
 
       <!-- 빈 상태 -->
       <div v-else-if="!store.active" class="flex-1 grid place-items-center">
@@ -163,7 +176,9 @@ onMounted(() => {
 
       <!-- 서버 처리 상태 -->
       <div
-        v-else-if="store.active.status === 'processing' || store.active.status === 'failed'"
+        v-else-if="
+          store.active.status === 'processing' || store.active.status === 'deleting' || store.active.status === 'failed'
+        "
         class="flex-1 grid place-items-center bg-surf2/50 px-8"
       >
         <div
@@ -180,7 +195,9 @@ onMounted(() => {
             {{
               store.active.status === "failed"
                 ? "STT 또는 보고서 생성 중 오류가 발생했습니다."
-                : "STT 전사와 5요소 보고서 생성을 진행하고 있습니다."
+                : store.active.status === "deleting"
+                  ? "원본 음성과 전사·보고서 데이터를 영구 삭제하고 있습니다."
+                  : "STT 전사와 5요소 보고서 생성을 진행하고 있습니다."
             }}
           </p>
           <div class="mt-5">
@@ -191,7 +208,13 @@ onMounted(() => {
             <div class="h-2 rounded-full bg-navy/[0.07] overflow-hidden">
               <div
                 class="h-full rounded-full transition-all"
-                :class="store.active.status === 'failed' ? 'bg-[#d4495f]' : 'bg-grad'"
+                :class="
+                  store.active.status === 'failed'
+                    ? 'bg-[#d4495f]'
+                    : store.active.status === 'deleting'
+                      ? 'bg-[#b76e00]'
+                      : 'bg-grad'
+                "
                 :style="{ width: `${store.active.progress?.percent ?? 0}%` }"
               ></div>
             </div>
@@ -354,6 +377,25 @@ onMounted(() => {
           <span class="flex-1"></span>
 
           <template v-if="store.active.status !== 'published'">
+            <div v-if="confirmDelete" class="flex items-center gap-2 rise">
+              <span class="text-[12px] text-[#d4495f]">원본과 산출물을 영구 삭제합니다.</span>
+              <button class="text-[12px] px-3 py-2 rounded-xl bg-[#d4495f] text-white font-semibold" @click="doDelete">
+                확인, 삭제
+              </button>
+              <button
+                class="text-[12px] px-2.5 py-2 rounded-xl text-slate hover:bg-navy/5"
+                @click="confirmDelete = false"
+              >
+                취소
+              </button>
+            </div>
+            <button
+              v-else
+              class="text-[13px] px-3.5 py-2 rounded-xl border border-[#d4495f]/30 text-[#d4495f] hover:bg-[#fdecef] transition"
+              @click="confirmDelete = true"
+            >
+              초안 삭제
+            </button>
             <button
               class="flex items-center gap-1.5 text-[13px] px-3.5 py-2 rounded-xl border border-line2 text-slate hover:border-navy/30 hover:text-ink disabled:opacity-40 transition"
               :disabled="store.saving"
@@ -406,5 +448,11 @@ onMounted(() => {
         </footer>
       </template>
     </section>
+    <p
+      v-if="store.deletionError"
+      class="fixed right-5 bottom-5 z-50 rounded-xl bg-[#fdecef] border border-[#d4495f]/25 px-4 py-3 text-[12px] text-[#d4495f] shadow-lg"
+    >
+      {{ store.deletionError }}
+    </p>
   </main>
 </template>

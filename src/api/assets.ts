@@ -1,6 +1,6 @@
 import type { AssetReport, Domain, FiveElements, Severity, UploadForm } from "@/types";
 import { DOMAIN_LABEL } from "@/types";
-import { get, patch, post } from "@/api/http";
+import { del, get, patch, post } from "@/api/http";
 
 const USE_MOCK = (import.meta.env.VITE_USE_MOCK ?? "true") === "true";
 export const ASSET_MOCK_ENABLED = USE_MOCK;
@@ -37,6 +37,7 @@ export const FLOW_STEPS = [
 
 const ASSET_REVIEW: AssetReport = {
   id: "AST-2041",
+  transcriptionId: "AST-2041",
   title: "EKS Pod CrashLoopBackOff 장애 대응",
   domain: "incident",
   space: "OPS",
@@ -68,6 +69,7 @@ const ASSET_REVIEW: AssetReport = {
 
 const ASSET_PUBLISHED: AssetReport = {
   id: "AST-2038",
+  transcriptionId: "AST-2038",
   title: "ArgoCD 동기화 실패 롤백 절차",
   domain: "manual",
   space: "OPS",
@@ -134,7 +136,7 @@ export interface AssetHistoryItemResponse {
   report_id: string | null;
   title: string;
   category: string;
-  status: "processing" | "draft" | "completed" | "failed";
+  status: "processing" | "draft" | "deleting" | "completed" | "failed";
   workflow_status: string;
   confluence_url: string;
   created_at: string;
@@ -159,6 +161,7 @@ interface AssetHistoryListResponse {
     all: number;
     processing: number;
     draft: number;
+    deleting: number;
     completed: number;
     failed: number;
   };
@@ -272,6 +275,7 @@ export function mapAssetHistoryItem(raw: AssetHistoryItemResponse): AssetReport 
   const status = raw.status === "completed" ? "published" : raw.status;
   return {
     id: raw.report_id ?? raw.asset_id,
+    transcriptionId: raw.transcription_id,
     title: raw.title,
     domain: domainFromCategory(raw.category, "incident"),
     space: "OPS",
@@ -325,6 +329,7 @@ export async function listAssets(): Promise<AssetHistory> {
         all: MOCK_ASSETS.length,
         processing: 0,
         draft: MOCK_ASSETS.filter((asset) => asset.status === "draft").length,
+        deleting: 0,
         completed: MOCK_ASSETS.filter((asset) => asset.status === "published").length,
         failed: 0,
       },
@@ -333,9 +338,10 @@ export async function listAssets(): Promise<AssetHistory> {
   return fetchAssetHistory();
 }
 
-export function mapReportResponse(raw: ReportResponse, form: UploadForm): AssetReport {
+export function mapReportResponse(raw: ReportResponse, form: UploadForm, transcriptionId: string): AssetReport {
   return {
     id: raw.report_id,
+    transcriptionId,
     title: raw.title,
     domain: domainFromCategory(raw.category, form.domain),
     space: "OPS",
@@ -365,8 +371,10 @@ export async function generateDraft(form: UploadForm, onProgress?: GenerationPro
   if (USE_MOCK) {
     await delay(1400);
     const head = form.fileName.replace(/\.[^.]+$/, "");
+    const mockId = seq++;
     return {
-      id: `AST-${seq++}`,
+      id: `AST-${mockId}`,
+      transcriptionId: `mock-${mockId}`,
       title: head,
       domain: form.domain,
       space: "OPS",
@@ -401,7 +409,16 @@ export async function generateDraft(form: UploadForm, onProgress?: GenerationPro
   onProgress?.("업로드 완료 · STT 작업 대기 중");
   const reportId = await waitForReport(transcriptionId, onProgress);
   const report = await get<ReportResponse>(`/v1/reports/${reportId}`);
-  return mapReportResponse(report, form);
+  return mapReportResponse(report, form, transcriptionId);
+}
+
+export interface AssetDeletionResponse {
+  transcription_id: string;
+  status: "deleting";
+}
+
+export function deleteAsset(transcriptionId: string): Promise<AssetDeletionResponse> {
+  return del<AssetDeletionResponse>(`/v1/assets/${transcriptionId}`);
 }
 
 /** PATCH /v1/reports/{id} — HITL 부분 수정 (published면 409) */

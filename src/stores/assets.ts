@@ -1,7 +1,15 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import type { AssetReport, FiveElements, UploadForm } from "@/types";
-import { ASSET_MOCK_ENABLED, MOCK_ASSETS, approveAsset, generateDraft, listAssets, saveAsset } from "@/api/assets";
+import {
+  ASSET_MOCK_ENABLED,
+  MOCK_ASSETS,
+  approveAsset,
+  deleteAsset,
+  generateDraft,
+  listAssets,
+  saveAsset,
+} from "@/api/assets";
 
 export const useAssetsStore = defineStore("assets", () => {
   const list = ref<AssetReport[]>(ASSET_MOCK_ENABLED ? [...MOCK_ASSETS] : []);
@@ -11,6 +19,7 @@ export const useAssetsStore = defineStore("assets", () => {
   const generating = ref(false);
   const saving = ref(false);
   const publishing = ref(false);
+  const deletionError = ref("");
   const generationStatus = ref("");
   const generationError = ref("");
   const historyLoading = ref(false);
@@ -50,12 +59,20 @@ export const useAssetsStore = defineStore("assets", () => {
     generationStatus.value = "업로드 준비 중";
     generationError.value = "";
     try {
+      const shouldOpenDraft = composing.value && activeId.value === null;
       const draft = await generateDraft(form, (message) => {
         generationStatus.value = message;
       });
-      list.value.unshift(draft);
-      activeId.value = draft.id;
-      composing.value = false;
+      const existingIndex = list.value.findIndex((asset) => asset.transcriptionId === draft.transcriptionId);
+      if (existingIndex >= 0) {
+        list.value.splice(existingIndex, 1, draft);
+      } else {
+        list.value.unshift(draft);
+      }
+      if (shouldOpenDraft && composing.value && activeId.value === null) {
+        activeId.value = draft.id;
+        composing.value = false;
+      }
       generationStatus.value = "";
     } catch (error) {
       generationError.value = error instanceof Error ? error.message : "보고서 생성에 실패했습니다";
@@ -100,6 +117,37 @@ export const useAssetsStore = defineStore("assets", () => {
     }
   }
 
+  async function removeDraft(asset: AssetReport) {
+    if (!["draft", "review"].includes(asset.status)) return;
+    deletionError.value = "";
+    try {
+      await deleteAsset(asset.transcriptionId);
+      asset.status = "deleting";
+      asset.workflowStatus = "deleting";
+      scheduleDeletionRefresh(asset.transcriptionId);
+    } catch (error) {
+      deletionError.value = error instanceof Error ? error.message : "초안을 삭제하지 못했습니다";
+    }
+  }
+
+  function scheduleDeletionRefresh(transcriptionId: string, attempt = 0) {
+    if (attempt >= 60) return;
+    globalThis.setTimeout(async () => {
+      try {
+        const wasActive = active.value?.transcriptionId === transcriptionId;
+        const history = await listAssets();
+        list.value = history.items;
+        if (history.items.some((asset) => asset.transcriptionId === transcriptionId)) {
+          scheduleDeletionRefresh(transcriptionId, attempt + 1);
+        } else if (wasActive) {
+          startNew();
+        }
+      } catch {
+        scheduleDeletionRefresh(transcriptionId, attempt + 1);
+      }
+    }, 2000);
+  }
+
   /** 작성된 5요소 개수 (완성도 미터) */
   const completeness = computed(() => {
     const a = active.value;
@@ -111,7 +159,7 @@ export const useAssetsStore = defineStore("assets", () => {
   const currentStep = computed(() => {
     if (generating.value) return 2;
     if (composing.value || !active.value) return 1;
-    if (active.value.status === "processing" || active.value.status === "failed") return 2;
+    if (["processing", "deleting", "failed"].includes(active.value.status)) return 2;
     return active.value.status === "published" ? 4 : 3;
   });
 
@@ -122,6 +170,7 @@ export const useAssetsStore = defineStore("assets", () => {
     generating,
     saving,
     publishing,
+    deletionError,
     generationStatus,
     generationError,
     historyLoading,
@@ -137,5 +186,6 @@ export const useAssetsStore = defineStore("assets", () => {
     setTitle,
     save,
     publish,
+    removeDraft,
   };
 });
